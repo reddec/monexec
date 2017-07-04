@@ -18,12 +18,12 @@ const DefaultRestartTimeout = 5 * time.Second
 const DefaultStopTimeout = 5 * time.Second
 
 type BaseInfo struct {
-	ID          string
-	Command     string
-	Args        []string
-	Environment map[string]string
-	Workdir     string
-	StopTimeout time.Duration
+	ID          string            `yaml:"id"`
+	Command     string            `yaml:"command"`
+	Args        []string          `yaml:"args"`
+	Environment map[string]string `yaml:"environment"`
+	Workdir     string            `yaml:"workdir"`
+	StopTimeout time.Duration     `yaml:"stop_timeout"`
 }
 
 func (b *BaseInfo) GetID() string {
@@ -53,14 +53,14 @@ func (b *BaseInfo) Env(arg, value string) *BaseInfo {
 }
 
 type Delayed struct {
-	BaseInfo
-	RestartDelay time.Duration
+	BaseInfo                   `yaml:",squash"`
+	RestartDelay time.Duration `yaml:"restart_delay"`
 }
 
 type Executable struct {
-	Delayed
-	RestartCount int
-	Critical     bool
+	Delayed       `yaml:",squash"`
+	Retries  int  `yaml:"retries"`
+	Critical bool `yaml:"critical"`
 }
 
 func (exe *Executable) stopOrKill(logger *log.Logger, cmd *exec.Cmd) {
@@ -141,10 +141,10 @@ LOOP:
 			break LOOP
 		}
 
-		if exe.RestartCount > 0 {
-			logger.Println("Restarts left:", exe.RestartCount)
-			exe.RestartCount--
-		} else if exe.RestartCount == 0 {
+		if exe.Retries > 0 {
+			logger.Println("Restarts left:", exe.Retries)
+			exe.Retries--
+		} else if exe.Retries == 0 {
 			logger.Println("Process restart limit exceeded")
 			break
 		}
@@ -186,7 +186,7 @@ func (m *Monitor) Add(ex *Executable) *Executable {
 }
 
 func (m *Monitor) Oneshot(command string, args ...string) *Executable {
-	exe := &Executable{RestartCount: 0, Critical: false}
+	exe := &Executable{Retries: 0, Critical: false}
 	exe.Command = command
 	exe.Args = append(exe.Args, args...)
 	exe.StopTimeout = DefaultStopTimeout
@@ -194,7 +194,7 @@ func (m *Monitor) Oneshot(command string, args ...string) *Executable {
 }
 
 func (m *Monitor) Critical(command string, args ...string) *Executable {
-	exe := &Executable{RestartCount: 0, Critical: true}
+	exe := &Executable{Retries: 0, Critical: true}
 	exe.Command = command
 	exe.Args = append(exe.Args, args...)
 	exe.StopTimeout = DefaultStopTimeout
@@ -202,7 +202,7 @@ func (m *Monitor) Critical(command string, args ...string) *Executable {
 }
 
 func (m *Monitor) Restart(maxRetries int, command string, args ...string) *Executable {
-	exe := &Executable{RestartCount: maxRetries, Critical: false}
+	exe := &Executable{Retries: maxRetries, Critical: false}
 	exe.Command = command
 	exe.Args = append(exe.Args, args...)
 	exe.StopTimeout = DefaultStopTimeout
