@@ -1,0 +1,23 @@
+package monexec
+
+import (
+	"testing"
+	"context"
+	"github.com/stretchr/testify/assert"
+	"time"
+)
+
+func TestMonitor_Run(t *testing.T) {
+	m := Monitor{}
+	m.Oneshot("echo", "123", "456").WithID("test1")
+	m.Restart(3, "nc", "-l", "0").WithID("netcat")
+	m.Critical("/bin/sh", "-c", "sleep 2").WithID("shell-delay")
+	ctx, stp := context.WithCancel(context.Background())
+	go func() {
+		<-time.After(5 * time.Second)
+		stp()
+	}()
+	err := m.Run(ctx)
+
+	assert.NoError(t, err)
+}
