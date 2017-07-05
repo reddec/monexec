@@ -13,38 +13,50 @@ import (
 	"errors"
 )
 
-const RestartInfinity = -1
-const DefaultRestartTimeout = 5 * time.Second
-const DefaultStopTimeout = 5 * time.Second
+const (
+	RestartInfinity       = -1              // Restart forever
+	DefaultRestartTimeout = 5 * time.Second // Default timeout between restarts
+	DefaultStopTimeout    = 5 * time.Second // Default timeout to wait for graceful shutdown
+	DefaultStartTimeout   = 3 * time.Second // Default timeout to check process become alive
+)
 
-type BaseInfo struct {
-	ID          string            `yaml:"id"`
-	Command     string            `yaml:"command"`
-	Args        []string          `yaml:"args"`
-	Environment map[string]string `yaml:"environment"`
-	Workdir     string            `yaml:"workdir"`
-	StopTimeout time.Duration     `yaml:"stop_timeout"`
+// Executable - basic information about process
+type Executable struct {
+	Label          string            `yaml:"label"`           // Human-readable label for process. If not set - command used
+	Command        string            `yaml:"command"`         // Executable
+	Args           []string          `yaml:"args"`            // Arguments to command
+	Environment    map[string]string `yaml:"environment"`     // Additional environment variables
+	Retries        int               `yaml:"retries"`         // Restart retries limit. Negative value means infinity
+	Critical       bool              `yaml:"critical"`        // Stop all other processes on finish or error
+	WorkDir        string            `yaml:"workdir"`         // Working directory. If not set - current dir used
+	StopTimeout    time.Duration     `yaml:"stop_timeout"`    // Timeout before terminate process
+	StartTimeout   time.Duration     `yaml:"start_timeout"`   // Timeout to check process is still alive
+	RestartTimeout time.Duration     `yaml:"restart_timeout"` // Timeout before restart
 }
 
-func (b *BaseInfo) GetID() string {
-	id := b.ID
+// ID of process. By default Label is used, but if it not set, command name is selected
+func (b *Executable) ID() string {
+	id := b.Label
 	if id == "" {
 		id = b.Command
 	}
 	return id
 }
 
-func (b *BaseInfo) WithID(id string) *BaseInfo {
-	b.ID = id
+// Mark process with custom label
+func (b *Executable) Mark(label string) *Executable {
+	b.Label = label
 	return b
 }
 
-func (b *BaseInfo) Arg(arg string) *BaseInfo {
+// Arg adds additional positional argument
+func (b *Executable) Arg(arg string) *Executable {
 	b.Args = append(b.Args, arg)
 	return b
 }
 
-func (b *BaseInfo) Env(arg, value string) *BaseInfo {
+// Env adds additional environment key-value pair
+func (b *Executable) Env(arg, value string) *Executable {
 	if b.Environment == nil {
 		b.Environment = make(map[string]string)
 	}
@@ -52,17 +64,8 @@ func (b *BaseInfo) Env(arg, value string) *BaseInfo {
 	return b
 }
 
-type Delayed struct {
-	BaseInfo                   `yaml:",squash"`
-	RestartDelay time.Duration `yaml:"restart_delay"`
-}
-
-type Executable struct {
-	Delayed       `yaml:",squash"`
-	Retries  int  `yaml:"retries"`
-	Critical bool `yaml:"critical"`
-}
-
+// try to do graceful process termination by sending SIGKILL. If no response after StopTimeout
+// SIGTERM is used
 func (exe *Executable) stopOrKill(logger *log.Logger, cmd *exec.Cmd) {
 	ch := make(chan struct{}, 1)
 	logger.Println("Sending SIGKILL")
@@ -81,7 +84,8 @@ func (exe *Executable) stopOrKill(logger *log.Logger, cmd *exec.Cmd) {
 	}
 }
 
-func (exe *Executable) Run(logger *log.Logger, stop <-chan struct{}) error {
+// run once executable, wrap output and wait for finish
+func (exe *Executable) runOnce(logger *log.Logger, stop <-chan struct{}) error {
 	cmd := exec.Command(exe.Command, exe.Args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Pdeathsig: syscall.SIGTERM,
@@ -94,8 +98,8 @@ func (exe *Executable) Run(logger *log.Logger, stop <-chan struct{}) error {
 			cmd.Env = append(cmd.Env, k+"="+v)
 		}
 	}
-	if exe.Workdir != "" {
-		cmd.Dir = exe.Workdir
+	if exe.WorkDir != "" {
+		cmd.Dir = exe.WorkDir
 	}
 
 	stdout, err := cmd.StdoutPipe()
@@ -125,12 +129,30 @@ func (exe *Executable) Run(logger *log.Logger, stop <-chan struct{}) error {
 	}
 }
 
-func (exe *Executable) Daemonize(stop <-chan struct{}) error {
+// Run loop that will monitor and restart process if needed
+func (exe *Executable) Run(stop <-chan struct{}, logsink io.Writer) error {
 	var err error
-	logger := log.New(os.Stdout, "["+exe.GetID()+"] ", log.LstdFlags)
+	if logsink == nil {
+		logsink = os.Stdout
+	}
+	retries := exe.Retries
+	logger := log.New(logsink, "["+exe.ID()+"] ", log.LstdFlags)
 LOOP:
 	for {
-		err = exe.Run(logger, stop)
+		started := make(chan error, 1)
+
+		go func() { started <- exe.runOnce(logger, stop) }()
+
+		select {
+		case serr := <-started:
+			err = serr
+		case <-time.After(exe.StartTimeout):
+			logger.Println("Process is still running for enough time - resetting restart limit")
+			retries = exe.Retries
+			serr := <-started
+			err = serr
+		}
+
 		if err == nil {
 			logger.Println("Process finished successfully")
 		} else {
@@ -141,20 +163,25 @@ LOOP:
 			break LOOP
 		}
 
-		if exe.Retries > 0 {
-			logger.Println("Restarts left:", exe.Retries)
-			exe.Retries--
-		} else if exe.Retries == 0 {
-			logger.Println("Process restart limit exceeded")
+		if retries > 0 {
+			logger.Println("Restarts left:", retries)
+			retries--
+		} else if retries == 0 {
+			if exe.Retries != 0 { // not one-shot
+				logger.Println("Process restart limit exceeded")
+				if err == nil {
+					err = errors.New("restart limit exceeded")
+				}
+			}
 			break
 		}
 
-		logger.Println("Waiting", exe.RestartDelay, "before restart")
+		logger.Println("Waiting", exe.RestartTimeout, "before restart")
 		select {
 		case <-stop:
 			logger.Println("Gracefull shutdown restart loop")
 			break LOOP
-		case <-time.After(exe.RestartDelay):
+		case <-time.After(exe.RestartTimeout):
 		}
 	}
 	if err != nil {
@@ -165,6 +192,7 @@ LOOP:
 	return err
 }
 
+// line-by-line writer to logger
 func dumpToLogger(reader io.Reader, logger *log.Logger) {
 	scanner := bufio.NewReader(reader)
 	for {
@@ -176,15 +204,20 @@ func dumpToLogger(reader io.Reader, logger *log.Logger) {
 	}
 }
 
+// Monitor pool of executables
 type Monitor struct {
 	Executables []*Executable
+	Logsink     io.Writer
 }
 
+// Add prepared executable
 func (m *Monitor) Add(ex *Executable) *Executable {
 	m.Executables = append(m.Executables, ex)
 	return ex
 }
 
+// Oneshot adds an instance of non-critical non-restartable executable.
+// Runs once with error tolerance
 func (m *Monitor) Oneshot(command string, args ...string) *Executable {
 	exe := &Executable{Retries: 0, Critical: false}
 	exe.Command = command
@@ -193,6 +226,7 @@ func (m *Monitor) Oneshot(command string, args ...string) *Executable {
 	return m.Add(exe)
 }
 
+// Critical adds an instance of non-restartable executable which will stop all another processes on error
 func (m *Monitor) Critical(command string, args ...string) *Executable {
 	exe := &Executable{Retries: 0, Critical: true}
 	exe.Command = command
@@ -201,29 +235,33 @@ func (m *Monitor) Critical(command string, args ...string) *Executable {
 	return m.Add(exe)
 }
 
+// Restart adds an instance of restartable non-critical executable
 func (m *Monitor) Restart(maxRetries int, command string, args ...string) *Executable {
 	exe := &Executable{Retries: maxRetries, Critical: false}
 	exe.Command = command
 	exe.Args = append(exe.Args, args...)
+	exe.StartTimeout = DefaultStartTimeout
 	exe.StopTimeout = DefaultStopTimeout
-	exe.RestartDelay = DefaultRestartTimeout
+	exe.RestartTimeout = DefaultRestartTimeout
 	return m.Add(exe)
 }
 
+// Forever adds an infinity-restartable non-critical executable
 func (m *Monitor) Forever(command string, args ...string) *Executable {
 	return m.Restart(RestartInfinity, command, args...)
 }
 
+// Run all processes and monitor them
 func (m *Monitor) Run(ctx context.Context) error {
 	done := make(chan struct{})
 
 	wg := sync.WaitGroup{}
+	wg.Add(len(m.Executables))
 	errs := make([]error, len(m.Executables))
 	for i, exe := range m.Executables {
-		wg.Add(1)
 		go func(i int, exe *Executable) {
 			defer wg.Done()
-			errs[i] = exe.Daemonize(firstDone(ctx.Done(), done))
+			errs[i] = exe.Run(firstDone(ctx.Done(), done), m.Logsink)
 			if errs[i] != nil && exe.Critical {
 				close(done)
 			}
@@ -240,7 +278,7 @@ func (m *Monitor) joinErrors(errs []error) error {
 			errT += "\n"
 		}
 		if err != nil {
-			errT += m.Executables[i].GetID() + ": " + err.Error()
+			errT += m.Executables[i].ID() + ": " + err.Error()
 		}
 	}
 	if errT != "" {
