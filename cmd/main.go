@@ -1,7 +1,7 @@
 package main
 
 import (
-	".."
+	"github.com/reddec/monexec"
 	"gopkg.in/yaml.v2"
 	"os"
 	"io/ioutil"
@@ -208,7 +208,7 @@ main() {
 		c := make(chan os.Signal, 3)
 		signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGHUP)
 		go func() {
-			for _ = range c {
+			for range c {
 				stp()
 			}
 		}()
