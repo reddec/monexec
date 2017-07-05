@@ -20,6 +20,21 @@ const (
 	DefaultStartTimeout   = 3 * time.Second // Default timeout to check process become alive
 )
 
+// Executable Event type
+type EventType int
+
+const (
+	STARTED EventType = iota // Process started (after StartTimeout)
+	STOPPED                  // Process stopped (no matter with error or not)
+)
+
+// Event of executable state
+type Event struct {
+	Type       EventType
+	Executable *Executable
+	Error      error
+}
+
 // Executable - basic information about process
 type Executable struct {
 	Label          string            `yaml:"label,omitempty"`           // Human-readable label for process. If not set - command used
@@ -116,6 +131,7 @@ func (exe *Executable) runOnce(logger *log.Logger, stop <-chan struct{}) error {
 		return err
 	}
 	defer cmd.Process.Kill()
+
 	logger.Println("Started with PID", cmd.Process.Pid)
 	res := make(chan error, 1)
 	go dumpToLogger(io.MultiReader(stdout, stderr), logger)
@@ -130,13 +146,14 @@ func (exe *Executable) runOnce(logger *log.Logger, stop <-chan struct{}) error {
 }
 
 // Run loop that will monitor and restart process if needed
-func (exe *Executable) Run(stop <-chan struct{}, logsink io.Writer) error {
+func (exe *Executable) Run(stop <-chan struct{}, events chan<- Event, logsink io.Writer) error {
 	var err error
 	if logsink == nil {
 		logsink = os.Stdout
 	}
 	retries := exe.Retries
 	logger := log.New(logsink, "["+exe.ID()+"] ", log.LstdFlags)
+
 LOOP:
 	for {
 		started := make(chan error, 1)
@@ -149,9 +166,11 @@ LOOP:
 		case <-time.After(exe.StartTimeout):
 			logger.Println("Process is still running for enough time - resetting restart limit")
 			retries = exe.Retries
+			events <- Event{STARTED, exe, nil}
 			serr := <-started
 			err = serr
 		}
+		events <- Event{STOPPED, exe, err}
 
 		if err == nil {
 			logger.Println("Process finished successfully")
@@ -252,7 +271,7 @@ func (m *Monitor) Forever(command string, args ...string) *Executable {
 }
 
 // Run all processes and monitor them
-func (m *Monitor) Run(ctx context.Context) error {
+func (m *Monitor) Run(ctx context.Context, events chan<- Event) error {
 	done := make(chan struct{})
 
 	wg := sync.WaitGroup{}
@@ -261,7 +280,7 @@ func (m *Monitor) Run(ctx context.Context) error {
 	for i, exe := range m.Executables {
 		go func(i int, exe *Executable) {
 			defer wg.Done()
-			errs[i] = exe.Run(firstDone(ctx.Done(), done), m.Logsink)
+			errs[i] = exe.Run(firstDone(ctx.Done(), done), events, m.Logsink)
 			if errs[i] != nil && exe.Critical {
 				close(done)
 			}
@@ -269,6 +288,28 @@ func (m *Monitor) Run(ctx context.Context) error {
 	}
 	wg.Wait()
 	return m.joinErrors(errs)
+}
+
+// RunNoEvent start Run with null events consumer
+func (m *Monitor) RunNoEvents(ctx context.Context) error {
+	dummy := make(chan Event, 1)
+	go func() {
+		for range dummy {
+		}
+	}()
+	return m.Run(ctx, dummy)
+}
+
+// Start in background.
+// Last event always will be with (nil) Executable, STOPPED state and error as result of Run
+func (m *Monitor) Start(ctx context.Context) <-chan Event {
+	ch := make(chan Event, 2*len(m.Executables))
+	go func() {
+		defer close(ch)
+		err := m.Run(ctx, ch)
+		ch <- Event{STOPPED, nil, err}
+	}()
+	return ch
 }
 
 func (m *Monitor) joinErrors(errs []error) error {

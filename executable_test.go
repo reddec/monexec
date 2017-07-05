@@ -17,7 +17,7 @@ func TestMonitor_Run(t *testing.T) {
 		<-time.After(5 * time.Second)
 		stp()
 	}()
-	err := m.Run(ctx)
+	err := m.RunNoEvents(ctx)
 
 	assert.NoError(t, err)
 }
