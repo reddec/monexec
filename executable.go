@@ -22,16 +22,16 @@ const (
 
 // Executable - basic information about process
 type Executable struct {
-	Label          string            `yaml:"label"`           // Human-readable label for process. If not set - command used
-	Command        string            `yaml:"command"`         // Executable
-	Args           []string          `yaml:"args"`            // Arguments to command
-	Environment    map[string]string `yaml:"environment"`     // Additional environment variables
-	Retries        int               `yaml:"retries"`         // Restart retries limit. Negative value means infinity
-	Critical       bool              `yaml:"critical"`        // Stop all other processes on finish or error
-	WorkDir        string            `yaml:"workdir"`         // Working directory. If not set - current dir used
-	StopTimeout    time.Duration     `yaml:"stop_timeout"`    // Timeout before terminate process
-	StartTimeout   time.Duration     `yaml:"start_timeout"`   // Timeout to check process is still alive
-	RestartTimeout time.Duration     `yaml:"restart_timeout"` // Timeout before restart
+	Label          string            `yaml:"label,omitempty"`           // Human-readable label for process. If not set - command used
+	Command        string            `yaml:"command"`                   // Executable
+	Args           []string          `yaml:"args,omitempty"`            // Arguments to command
+	Environment    map[string]string `yaml:"environment,omitempty"`     // Additional environment variables
+	Retries        int               `yaml:"retries,omitempty"`         // Restart retries limit. Negative value means infinity
+	Critical       bool              `yaml:"critical,omitempty"`        // Stop all other processes on finish or error
+	WorkDir        string            `yaml:"workdir,omitempty"`         // Working directory. If not set - current dir used
+	StopTimeout    time.Duration     `yaml:"stop_timeout,omitempty"`    // Timeout before terminate process
+	StartTimeout   time.Duration     `yaml:"start_timeout,omitempty"`   // Timeout to check process is still alive
+	RestartTimeout time.Duration     `yaml:"restart_timeout,omitempty"` // Timeout before restart
 }
 
 // ID of process. By default Label is used, but if it not set, command name is selected
