@@ -1,7 +1,7 @@
 package main
 
 import (
-	"./monexec"
+	"github.com/reddec/monexec/monexec"
 	"gopkg.in/yaml.v2"
 	"os"
 	"io/ioutil"
