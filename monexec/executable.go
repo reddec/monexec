@@ -102,9 +102,6 @@ func (exe *Executable) stopOrKill(logger *log.Logger, cmd *exec.Cmd) {
 // run once executable, wrap output and wait for finish
 func (exe *Executable) runOnce(logger *log.Logger, stop <-chan struct{}) error {
 	cmd := exec.Command(exe.Command, exe.Args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Pdeathsig: syscall.SIGTERM,
-	}
 	for _, param := range os.Environ() {
 		cmd.Env = append(cmd.Env, param)
 	}
