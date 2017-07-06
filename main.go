@@ -231,11 +231,12 @@ main() {
 		mon := monexec.Monitor{Executables: []*monexec.Executable{exe}}
 		ctx, stp := context.WithCancel(context.Background())
 
-		c := make(chan os.Signal, 3)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		c := make(chan os.Signal, 2)
+		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
 		go func() {
 			for range c {
 				stp()
+				break
 			}
 		}()
 
