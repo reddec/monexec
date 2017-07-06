@@ -232,7 +232,7 @@ main() {
 		ctx, stp := context.WithCancel(context.Background())
 
 		c := make(chan os.Signal, 3)
-		signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGHUP)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 		go func() {
 			for range c {
 				stp()

@@ -83,8 +83,8 @@ func (b *Executable) Env(arg, value string) *Executable {
 // SIGTERM is used
 func (exe *Executable) stopOrKill(logger *log.Logger, cmd *exec.Cmd) {
 	ch := make(chan struct{}, 1)
-	logger.Println("Sending SIGKILL")
-	cmd.Process.Kill()
+	logger.Println("Sending SIGKTERM")
+	cmd.Process.Signal(syscall.SIGTERM)
 	go func() {
 		cmd.Wait()
 		ch <- struct{}{}
@@ -95,7 +95,7 @@ func (exe *Executable) stopOrKill(logger *log.Logger, cmd *exec.Cmd) {
 		logger.Println("Process gracefull stopped")
 	case <-time.After(exe.StopTimeout):
 		logger.Println("Process gracefull shutdown waiting timeout")
-		cmd.Process.Signal(syscall.SIGTERM)
+		cmd.Process.Signal(syscall.SIGKILL)
 	}
 }
 
