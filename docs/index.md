@@ -55,9 +55,41 @@ Run single executable with specified strategies (modes)
 * `-restart-timeout=5s` - Timeout before restart
 * `--start-timeout=3s` - Timeout to check that process is started. Only after this timeout process will be marked alive and tried to be registered in Consul (if enabled)
 * `--stop-timeout=5s` - Timeout for graceful shutdown. Application first got signal `SIGTERM` and after this timeout `SIGKILL`
-* `-w, --workdir=WORKDIR` - Working directory. By default - same as monexec
+* `-w, --workdir=WORKDIR` - Working directory. By default - running directory
 
 ## start
+Start processes based on YAML configuration files
+
+**Usage:**
+`monexec start <config file or dir,...>`
+
+**Example:**
+
+`monexec start ./*.yaml`
+
+Configuration sources can be multiple directories and/or files. Files must contain valid YAML content and have `.yaml` or `.yml` extension.
+
+Minimal configuration file:
+
+```yaml
+command: path/to/executable
+```
+
+Full sample of configuration file:
+
+```yaml
+label: Netcat Sample Service
+command: nc
+args:
+- "-l"
+- "9000"
+retries: 5
+critical: false
+stop_timeout: 5s
+start_timeout: 3s
+restart_timeout: 5s
+```
+
 
 ## gen
 
