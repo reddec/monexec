@@ -8,3 +8,57 @@ It's tool for controlling processes like a **supervisord** but with some importa
 * Developed for used inside Docker containers
 * Different strategies for processes
 
+[download for most major platform](https://github.com/reddec/monexec/releases)
+
+# Installing
+
+Precompilled binaries:
+[release page](https://github.com/reddec/monexec/releases)
+
+From source (required Go toolchain):
+
+```
+go get -v -u github.com/reddec/monexec/...
+```
+
+# Usage
+
+`monexec [common-flags...] <command> [command-flags...] [args,...]`
+
+All flags can be set by environment variables with prefix `MONEXEC_`. For example flag `--label sample` can be set as `export MONEXEC_LABEL="sample"`
+
+Common flags:
+
+* `--label -l <label name>` - mark executable with specific ID. Used as service ID in Consul and in logs. By default ID will be randomly generated.
+* `--consul` - enable consul integration
+
+## Commands
+
+### run
+Run single executable with specified strategies (modes)
+
+**Usage:**
+`monexec run [flags...] <mode> <executable> [args...]`
+
+**Example:**
+`monexec run forver -- nc -l 9000` - will run command `nc -l 9000` and restart it forever if needed with default timeout
+
+**Modes:**
+
+* `critical` - fail on first error in application
+* `restart` - always restart application and ignore exit codes
+* `forever` - same as `restart` but with unlimited restart retries
+* `oneshot` - run application only once and ignore exit codes
+
+**Flags:**
+* `-r, --retries=5` - Maximum restart retries. Negative means infinity
+* `-restart-timeout=5s` - Timeout before restart
+* `--start-timeout=3s` - Timeout to check that process is started. Only after this timeout process will be marked alive and tried to be registered in Consul (if enabled)
+* `--stop-timeout=5s` - Timeout for graceful shutdown. Application first got signal `SIGTERM` and after this timeout `SIGKILL`
+* `-w, --workdir=WORKDIR` - Working directory. By default - same as monexec
+
+## start
+
+## gen
+
+# How to integrate with Consul
