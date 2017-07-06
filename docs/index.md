@@ -1,5 +1,9 @@
 # MONEXEC
 
+[![GitHub release](https://img.shields.io/github/release/reddec/monexec.svg)]()
+[![license](https://img.shields.io/github/license/reddec/monexec.svg)]()
+[![](https://godoc.org/github.com/reddec/monexec/monexec?status.svg)](http://godoc.org/github.com/reddec/monexec/monexec)
+
 It's tool for controlling processes like a **supervisord** but with some important features:
 * Easy to use - no dependencies. Just a single binary file pre-compilled for most major platforms
 * Easy to hack - monexec can be used as a Golang library with clean and simple architecture
