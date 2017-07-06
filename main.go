@@ -157,19 +157,22 @@ func consulEventsConsumer(events <-chan monexec.Event) {
 
 }
 
-func
-main() {
+func main() {
 	app := kingpin.New("monexec", "Light supervisor for monitoring processes")
 	app.Version("1.0.0").Author("Baryshnikov Alexander <dev@baryshnikov.net>")
 
 	cmdGen := app.Command("gen", "Generate basic configuration file for executable")
 
 	label := app.Flag("label", "Label for service").Short('l').Default(randomdata.Noun() + "-" + randomdata.Adjective()).String()
+	retries := app.Flag("retries", "Restart count").Short('r').Default("5").Int()
+	restartInterval := app.Flag("restart-timeout", "Timeout before restart").Default("5s").Duration()
+	startTimeout := app.Flag("start-timeout", "Timeout to check that process is started").Default("3s").Duration()
+	stopTimeout := app.Flag("stop-timeout", "Timeout for graceful shutdown").Default("5s").Duration()
+	workdir := app.Flag("workdir", "Working directory").Short('w').String()
 
 	genMode := cmdGen.Arg("mode", "Mode types").Required().Enum("oneshot", "critical", "forever", "restart")
 	genExecutable := cmdGen.Arg("executable", "Applications to start").Required().String()
 	genArgs := cmdGen.Arg("arg", "Arguments").Strings()
-	genRestart := cmdGen.Flag("retries", "Restart count").Short('r').Default("5").Int()
 
 	start := app.Command("start", "Start supervisor")
 	configLocations := start.Arg("config", "Config file or directory with .yaml/.yml files").Strings()
@@ -178,11 +181,6 @@ main() {
 	runMode := run.Arg("mode", "Mode types").Required().Enum("oneshot", "critical", "forever", "restart")
 	runExecutable := run.Arg("executable", "Applications to start").Required().String()
 	runArgs := run.Arg("arg", "Arguments").Strings()
-	runRestart := run.Flag("retries", "Restart count").Short('r').Default("5").Int()
-	runRestartInterval := run.Flag("restart-timeout", "Timeout before restart").Default("5s").Duration()
-	runStartTimeout := run.Flag("start-timeout", "Timeout to check that process is started").Default("3s").Duration()
-	runStopTimeout := run.Flag("stop-timeout", "Timeout for graceful shutdown").Default("5s").Duration()
-	runWorkdir := run.Flag("workdir", "Working directory").Short('w').String()
 
 	consulEnabled := app.Flag("consul", "Enable consul auto-registration (used ENV for config)").Bool()
 
@@ -190,7 +188,11 @@ main() {
 
 	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
 	case "gen":
-		exe := buildExec(*genMode, *genExecutable, *genArgs, *genRestart, *label)
+		exe := buildExec(*genMode, *genExecutable, *genArgs, *retries, *label)
+		exe.RestartTimeout = *restartInterval
+		exe.StartTimeout = *startTimeout
+		exe.StopTimeout = *stopTimeout
+		exe.WorkDir = *workdir
 		data, err := yaml.Marshal(exe)
 		if err != nil {
 			panic(err)
@@ -222,11 +224,11 @@ main() {
 		}
 
 	case "run":
-		exe := buildExec(*runMode, *runExecutable, *runArgs, *runRestart, *label)
-		exe.RestartTimeout = *runRestartInterval
-		exe.StartTimeout = *runStartTimeout
-		exe.StopTimeout = *runStopTimeout
-		exe.WorkDir = *runWorkdir
+		exe := buildExec(*runMode, *runExecutable, *runArgs, *retries, *label)
+		exe.RestartTimeout = *restartInterval
+		exe.StartTimeout = *startTimeout
+		exe.StopTimeout = *stopTimeout
+		exe.WorkDir = *workdir
 
 		mon := monexec.Monitor{Executables: []*monexec.Executable{exe}}
 		ctx, stp := context.WithCancel(context.Background())
