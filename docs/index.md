@@ -98,10 +98,19 @@ Generate configuration file based on `run` like arguments for `start` sources.
 Same as `run`
 
 For example, during development we are using 
-`monexec run -l srvExt1 --retries 10 --start-timeout 15s restart -- java -jar srvExt1.jar`. 
+
+```bash
+monexec run -l srvExt1 --retries 10 --start-timeout 15s restart -- java -jar srvExt1.jar
+```
+
 We want to save this settings into configuration file. Just change `run` to `gen`:
-`monexec gen -l srvExt1 --retries 10 --start-timeout 15s restart -- java -jar srvExt1.jar`. 
+
+```bash
+monexec gen -l srvExt1 --retries 10 --start-timeout 15s restart -- java -jar srvExt1.jar
+```
+
 and get
+
 ```yaml
 label: srvExt1
 command: java
@@ -115,3 +124,31 @@ restart_timeout: 5s
 ```
 
 # How to integrate with Consul
+
+Consul is a service registry and service discover system. MONEXEC can automatically register application in Consul as a service.
+
+Auto(de)registration available for `run` or `start` commands.
+
+Use general flag `--consul` (or env var `MONEXEC_CONSUL=true`) for enable Consul integration. Monexec will try register and update status of service in Consul local agent. 
+
+Monexec will continue work even if Consul becomes unavailable.
+
+Consul configuration is available only by [Go Consul API environment variables](https://godoc.org/github.com/hashicorp/consul/api#pkg-constants) (improvments for this are in roadmap). 
+Most usefull - `CONSUL_HTTP_ADDR` that specifies URL to Consul agent.
+
+## Examples:
+
+**Register in local agent:**
+
+```bash
+monexec run -l srv1 --consul forever -- nc -l 9000
+```
+
+**Register in remote agent:**
+
+Suppose Consul agent is running in host `registry`
+
+```bash
+export CONSUL_HTTP_ADDR="http://registry:8500"
+monexec run -l srv1 --consul forever -- nc -l 9000
+```
