@@ -1,13 +1,11 @@
 package monexec
 
 import (
-	"testing"
 	"context"
-	"github.com/stretchr/testify/assert"
 	"time"
 )
 
-func TestMonitor_Run(t *testing.T) {
+func ExampleMonitor_RunNoEvents() {
 	m := Monitor{}
 	m.Oneshot("echo", "123", "456").Mark("test1")
 	m.Restart(3, "nc", "-l", "0").Mark("netcat")
@@ -18,6 +16,7 @@ func TestMonitor_Run(t *testing.T) {
 		stp()
 	}()
 	err := m.RunNoEvents(ctx)
-
-	assert.NoError(t, err)
+	if err != nil {
+		panic(err)
+	}
 }
