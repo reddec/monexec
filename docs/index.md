@@ -25,6 +25,37 @@ From source (required Go toolchain):
 go get -v -u github.com/reddec/monexec/...
 ```
 
+# How to integrate with Consul
+
+Consul is a service registry and service discover system. MONEXEC can automatically register application in Consul as a service.
+
+Auto(de)registration available for `run` or `start` commands.
+
+Use general flag `--consul` (or env var `MONEXEC_CONSUL=true`) for enable Consul integration. Monexec will try register and update status of service in Consul local agent. 
+
+Monexec will continue work even if Consul becomes unavailable.
+
+Consul configuration is available only by [Go Consul API environment variables](https://godoc.org/github.com/hashicorp/consul/api#pkg-constants) (improvments for this are in roadmap). 
+Most usefull - `CONSUL_HTTP_ADDR` that specifies URL to Consul agent.
+
+## Examples:
+
+**Register in local agent:**
+
+```bash
+monexec run -l srv1 --consul forever -- nc -l 9000
+```
+
+**Register in remote agent:**
+
+Suppose Consul agent is running in host `registry`
+
+```bash
+export CONSUL_HTTP_ADDR="http://registry:8500"
+monexec run -l srv1 --consul forever -- nc -l 9000
+```
+
+
 # Usage
 
 `monexec [common-flags...] <command> [command-flags...] [args,...]`
@@ -125,34 +156,4 @@ retries: 10
 stop_timeout: 5s
 start_timeout: 15s
 restart_timeout: 5s
-```
-
-# How to integrate with Consul
-
-Consul is a service registry and service discover system. MONEXEC can automatically register application in Consul as a service.
-
-Auto(de)registration available for `run` or `start` commands.
-
-Use general flag `--consul` (or env var `MONEXEC_CONSUL=true`) for enable Consul integration. Monexec will try register and update status of service in Consul local agent. 
-
-Monexec will continue work even if Consul becomes unavailable.
-
-Consul configuration is available only by [Go Consul API environment variables](https://godoc.org/github.com/hashicorp/consul/api#pkg-constants) (improvments for this are in roadmap). 
-Most usefull - `CONSUL_HTTP_ADDR` that specifies URL to Consul agent.
-
-## Examples:
-
-**Register in local agent:**
-
-```bash
-monexec run -l srv1 --consul forever -- nc -l 9000
-```
-
-**Register in remote agent:**
-
-Suppose Consul agent is running in host `registry`
-
-```bash
-export CONSUL_HTTP_ADDR="http://registry:8500"
-monexec run -l srv1 --consul forever -- nc -l 9000
 ```
