@@ -131,13 +131,19 @@ func (exe *Executable) runOnce(logger *log.Logger, stop <-chan struct{}) error {
 
 	logger.Println("Started with PID", cmd.Process.Pid)
 	res := make(chan error, 1)
-	go dumpToLogger(io.MultiReader(stdout, stderr), logger)
+	dumpDone := make(chan struct{}, 1)
+	go func() {
+		dumpToLogger(io.MultiReader(stdout, stderr), logger)
+		dumpDone <- struct{}{}
+	}()
 	go func() { res <- cmd.Wait() }()
 	select {
 	case <-stop:
 		exe.stopOrKill(logger, cmd)
+		<-dumpDone
 		return nil
 	case err := <-res:
+		<-dumpDone
 		return err
 	}
 }

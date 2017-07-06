@@ -212,6 +212,7 @@ func main() {
 		go func() {
 			for range c {
 				stp()
+				break
 			}
 		}()
 
