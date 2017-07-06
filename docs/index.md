@@ -1,7 +1,7 @@
 # MONEXEC
 
-[![GitHub release](https://img.shields.io/github/release/reddec/monexec.svg)]()
-[![license](https://img.shields.io/github/license/reddec/monexec.svg)]()
+[![GitHub release](https://img.shields.io/github/release/reddec/monexec.svg)](https://github.com/reddec/monexec/releases)
+[![license](https://img.shields.io/github/license/reddec/monexec.svg)](https://github.com/reddec/monexec)
 [![](https://godoc.org/github.com/reddec/monexec/monexec?status.svg)](http://godoc.org/github.com/reddec/monexec/monexec)
 
 It's tool for controlling processes like a **supervisord** but with some important features:
