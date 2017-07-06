@@ -92,5 +92,26 @@ restart_timeout: 5s
 
 
 ## gen
+Generate configuration file based on `run` like arguments for `start` sources.
+
+**Usage:**
+Same as `run`
+
+For example, during development we are using 
+`monexec run -l srvExt1 --retries 10 --start-timeout 15s restart -- java -jar srvExt1.jar`. 
+We want to save this settings into configuration file. Just change `run` to `gen`:
+`monexec gen -l srvExt1 --retries 10 --start-timeout 15s restart -- java -jar srvExt1.jar`. 
+and get
+```yaml
+label: srvExt1
+command: java
+args:
+- -jar
+- srvExt1.jar
+retries: 10
+stop_timeout: 5s
+start_timeout: 15s
+restart_timeout: 5s
+```
 
 # How to integrate with Consul
