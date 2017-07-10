@@ -92,6 +92,9 @@ func consulEventsConsumer(events <-chan monexec.Event) {
 	wg := sync.WaitGroup{}
 
 	for event := range events {
+		if event.Executable == nil {
+			continue
+		}
 		ch, ok := state[event.Executable]
 		if !ok {
 			ch = make(chan monexec.Event, 1)
