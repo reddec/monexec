@@ -11,6 +11,7 @@ import (
 	"sync"
 	"context"
 	"errors"
+	"github.com/satori/go.uuid"
 )
 
 const (
@@ -47,6 +48,7 @@ type Executable struct {
 	StopTimeout    time.Duration     `yaml:"stop_timeout,omitempty"`    // Timeout before terminate process
 	StartTimeout   time.Duration     `yaml:"start_timeout,omitempty"`   // Timeout to check process is still alive
 	RestartTimeout time.Duration     `yaml:"restart_timeout,omitempty"` // Timeout before restart
+	GUID           string            `yaml:"guid,omitempty"`            // Global unique identity. Will be generated if empty
 }
 
 // ID of process. By default Label is used, but if it not set, command name is selected
@@ -56,6 +58,14 @@ func (b *Executable) ID() string {
 		id = b.Command
 	}
 	return id
+}
+
+// GetGUID - get or generate GUID
+func (b *Executable) GetGUID() string {
+	if b.GUID == "" {
+		b.GUID = uuid.NewV4().String()
+	}
+	return b.GUID
 }
 
 // Mark process with custom label
@@ -245,6 +255,7 @@ func (m *Monitor) Oneshot(command string, args ...string) *Executable {
 	exe.Command = command
 	exe.Args = append(exe.Args, args...)
 	exe.StopTimeout = DefaultStopTimeout
+	exe.GUID = uuid.NewV4().String()
 	return m.Add(exe)
 }
 
@@ -254,6 +265,7 @@ func (m *Monitor) Critical(command string, args ...string) *Executable {
 	exe.Command = command
 	exe.Args = append(exe.Args, args...)
 	exe.StopTimeout = DefaultStopTimeout
+	exe.GUID = uuid.NewV4().String()
 	return m.Add(exe)
 }
 
@@ -265,6 +277,7 @@ func (m *Monitor) Restart(maxRetries int, command string, args ...string) *Execu
 	exe.StartTimeout = DefaultStartTimeout
 	exe.StopTimeout = DefaultStopTimeout
 	exe.RestartTimeout = DefaultRestartTimeout
+	exe.GUID = uuid.NewV4().String()
 	return m.Add(exe)
 }
 

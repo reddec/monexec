@@ -15,6 +15,7 @@ import (
 	"os/signal"
 	"syscall"
 	"sync"
+	"fmt"
 )
 
 func loadConfigs(locations ...string) ([]*monexec.Executable, error) {
@@ -101,7 +102,9 @@ func consulEventsConsumer(events <-chan monexec.Event) {
 				autoDeregistrationTimeout = 1 * time.Minute
 			}
 			err := client.Agent().ServiceRegister(&api.AgentServiceRegistration{
+				ID:   event.Executable.GetGUID(),
 				Name: event.Executable.ID(),
+				Tags: []string{fmt.Sprintf("MONEXEC-%v", os.Getpid())},
 				Check: &api.AgentServiceCheck{
 					Timeout:                        autoDeregistrationTimeout.String(),
 					DeregisterCriticalServiceAfter: autoDeregistrationTimeout.String(),
