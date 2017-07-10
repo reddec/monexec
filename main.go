@@ -15,7 +15,6 @@ import (
 	"os/signal"
 	"syscall"
 	"sync"
-	"fmt"
 )
 
 func loadConfigs(locations ...string) ([]*monexec.Executable, error) {
@@ -77,6 +76,7 @@ func dummyConsumer(events <-chan monexec.Event) {
 }
 
 func consulEventsConsumer(events <-chan monexec.Event) {
+
 	config := api.DefaultConfig()
 	client, err := api.NewClient(config)
 	if err != nil {
@@ -84,78 +84,29 @@ func consulEventsConsumer(events <-chan monexec.Event) {
 		dummyConsumer(events)
 		return
 	}
-	stateLock := sync.Mutex{}
-	state := map[*monexec.Executable]monexec.Event{}
+
+	state := map[*monexec.Executable]chan monexec.Event{}
 
 	interval := 5 * time.Second
-	ticker := time.NewTicker(interval)
-	notify := make(chan monexec.Event, 1)
+
 	wg := sync.WaitGroup{}
-	regEvent := func(event monexec.Event) {
-		if event.Executable == nil {
-			return
-		}
-		switch event.Type {
-		case monexec.STARTED:
-			autoDeregistrationTimeout := 2 * interval
-			if autoDeregistrationTimeout < 1*time.Minute {
-				autoDeregistrationTimeout = 1 * time.Minute
-			}
-			err := client.Agent().ServiceRegister(&api.AgentServiceRegistration{
-				ID:   event.Executable.GetGUID(),
-				Name: event.Executable.ID(),
-				Tags: []string{fmt.Sprintf("MONEXEC-%v", os.Getpid())},
-				Check: &api.AgentServiceCheck{
-					Timeout:                        autoDeregistrationTimeout.String(),
-					DeregisterCriticalServiceAfter: autoDeregistrationTimeout.String(),
-				},
-			})
-			if err != nil {
-				log.Println("Can't register service", event.Executable.ID(), "in Consul:", err)
-			}
-		case monexec.STOPPED:
-			err := client.Agent().ServiceDeregister(event.Executable.ID())
-			if err != nil {
-				log.Println("Can't deregister service", event.Executable.ID(), "in Consul:", err)
-			}
-		}
-	}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-	LOOP:
-		for {
-			select {
-			case _, ok := <-ticker.C:
-				if !ok {
-					break LOOP
-				}
-				snapshot := map[*monexec.Executable]monexec.Event{}
-				stateLock.Lock()
-				for ex, ev := range state {
-					snapshot[ex] = ev
-				}
-				stateLock.Unlock()
-				for _, event := range snapshot {
-					regEvent(event)
-				}
-			case event, ok := <-notify:
-				if !ok {
-					break LOOP
-				}
-				regEvent(event)
-			}
-		}
-	}()
 
 	for event := range events {
-		stateLock.Lock()
-		state[event.Executable] = event
-		stateLock.Unlock()
-		notify <- event
+		ch, ok := state[event.Executable]
+		if !ok {
+			ch = make(chan monexec.Event, 1)
+			state[event.Executable] = ch
+			wg.Add(1)
+			go func(event monexec.Event, ch chan monexec.Event) {
+				defer wg.Done()
+				runService(ch, interval, client)
+			}(event, ch)
+		}
+		ch <- event
 	}
-	ticker.Stop()
-	close(notify)
+	for _, ch := range state {
+		close(ch)
+	}
 	wg.Wait()
 
 }

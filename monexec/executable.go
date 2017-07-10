@@ -124,6 +124,8 @@ func (exe *Executable) runOnce(logger *log.Logger, stop <-chan struct{}) error {
 		cmd.Dir = exe.WorkDir
 	}
 
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
