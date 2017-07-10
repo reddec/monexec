@@ -1,3 +1,4 @@
+// +build !linux
 package monexec
 
 import (
@@ -5,10 +6,8 @@ import (
 	"syscall"
 )
 
-// +build !windows
 func setAttrs(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid:   true,
-		Pdeathsig: syscall.SIGKILL,
+		Setpgid: true,
 	}
 }
