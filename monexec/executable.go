@@ -3,7 +3,6 @@ package monexec
 import (
 	"time"
 	"os/exec"
-	"syscall"
 	"os"
 	"io"
 	"log"
@@ -91,22 +90,21 @@ func (b *Executable) Env(arg, value string) *Executable {
 
 // try to do graceful process termination by sending SIGKILL. If no response after StopTimeout
 // SIGTERM is used
-func (exe *Executable) stopOrKill(logger *log.Logger, cmd *exec.Cmd) {
-	ch := make(chan struct{}, 1)
-	logger.Println("Sending SIGKTERM")
-	cmd.Process.Signal(syscall.SIGTERM)
-	go func() {
-		cmd.Wait()
-		ch <- struct{}{}
-	}()
+func (exe *Executable) stopOrKill(logger *log.Logger, cmd *exec.Cmd, res <-chan error) error {
+	logger.Println("Sending SIGINT")
+	err := cmd.Process.Signal(os.Interrupt)
+	if err != nil {
+		logger.Println("Failed send SIGINT:", err)
+	}
 
 	select {
-	case <-ch:
+	case err = <-res:
 		logger.Println("Process gracefull stopped")
 	case <-time.After(exe.StopTimeout):
 		logger.Println("Process gracefull shutdown waiting timeout")
-		cmd.Process.Signal(syscall.SIGKILL)
+		err = kill(cmd, logger)
 	}
+	return err
 }
 
 // run once executable, wrap output and wait for finish
@@ -139,25 +137,27 @@ func (exe *Executable) runOnce(logger *log.Logger, stop <-chan struct{}) error {
 	if err != nil {
 		return err
 	}
-	defer cmd.Process.Kill()
 
 	logger.Println("Started with PID", cmd.Process.Pid)
 	res := make(chan error, 1)
-	dumpDone := make(chan struct{}, 1)
+	dumpDone := sync.WaitGroup{}
+	dumpDone.Add(2)
 	go func() {
-		dumpToLogger(io.MultiReader(stdout, stderr), logger)
-		dumpDone <- struct{}{}
+		defer dumpDone.Done()
+		dumpToLogger(stdout, logger)
+	}()
+	go func() {
+		defer dumpDone.Done()
+		dumpToLogger(stderr, logger)
 	}()
 	go func() { res <- cmd.Wait() }()
 	select {
 	case <-stop:
-		exe.stopOrKill(logger, cmd)
-		<-dumpDone
-		return nil
-	case err := <-res:
-		<-dumpDone
-		return err
+		err = exe.stopOrKill(logger, cmd, res)
+	case err = <-res:
 	}
+	dumpDone.Wait()
+	return err
 }
 
 // Run loop that will monitor and restart process if needed
