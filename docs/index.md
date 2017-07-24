@@ -171,3 +171,43 @@ consul:
   register:
   - srvExt1
 ```
+
+# Critical services
+
+
+When critical services stopped, all other processes have to be stopped also
+
+
+Add section `critical` to configuration:
+
+
+```yaml
+services:
+- label: srvExt1
+  command: restart
+  args:
+  - java
+  - -jar
+  - srvExt1.jar
+  stop_timeout: 5s
+  restart_delay: 5s
+  restart: 10
+
+- label: consul
+  command: restart
+  args:
+  - consul
+  - agen
+  - -dev
+  - -bootstrap
+  - -ui
+consul:
+  url: http://localhost:8500
+  ttl: 3s
+  timeout: 1m0s
+  register:
+  - srvExt1
+critical:
+  - consul
+
+```
