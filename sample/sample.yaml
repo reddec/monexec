@@ -1,0 +1,15 @@
+services:
+- label: listener
+  command: /bin/bash
+  args:
+  - -c
+  - nc -l 9000
+  stop_timeout: 5s
+  restart_delay: 5s
+  restart: -1
+consul:
+  url: http://localhost:8500
+  ttl: 3s
+  timeout: 1m0s
+  permanent:
+  - listener

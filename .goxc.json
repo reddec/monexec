@@ -3,7 +3,7 @@
 		"default",
 		"publish-github"
 	],
-	"PackageVersion": "0.0.6",
+	"PackageVersion": "0.1.0",
 	"TaskSettings": {
 		"publish-github": {
 			"owner": "reddec",
