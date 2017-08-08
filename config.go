@@ -20,7 +20,7 @@ import (
 
 type Config struct {
 	Services []monexec.Executable                       `yaml:"services"`
-	Critical []string                           `yaml:"critical,omitempty"`
+	Critical []string                                   `yaml:"critical,omitempty"`
 	Consul struct {
 		URL                       string        `yaml:"url"`
 		TTL                       time.Duration `yaml:"ttl"`
@@ -28,6 +28,7 @@ type Config struct {
 		Dynamic                   []string      `yaml:"register,omitempty"`
 		Permanent                 []string      `yaml:"permanent,omitempty"`
 	}                                           `yaml:"consul"`
+	Telegram *Telegram                          `yaml:"telegram,omitempty"`
 }
 
 func (c *Config) MergeFrom(other *Config) error {
@@ -38,24 +39,32 @@ func (c *Config) MergeFrom(other *Config) error {
 
 	if c.Consul.URL == def.Consul.URL {
 		c.Consul.URL = other.Consul.URL
-	} else if c.Consul.URL != def.Consul.URL && other.Consul.URL != def.Consul.URL {
+	} else if c.Consul.URL != def.Consul.URL && other.Consul.URL != def.Consul.URL && other.Consul.URL != c.Consul.URL {
 		return errors.New("Different CONSUL definition (different URL) - specify same or only once")
 	}
 
 	if c.Consul.TTL == def.Consul.TTL {
 		c.Consul.TTL = other.Consul.TTL
-	} else if c.Consul.TTL != def.Consul.TTL && other.Consul.TTL != def.Consul.TTL {
+	} else if c.Consul.TTL != def.Consul.TTL && other.Consul.TTL != def.Consul.TTL && other.Consul.TTL != c.Consul.TTL {
 		return errors.New("Different CONSUL definition (different TTL) - specify same or only once")
 	}
 
 	if c.Consul.AutoDeregistrationTimeout == def.Consul.AutoDeregistrationTimeout {
 		c.Consul.AutoDeregistrationTimeout = other.Consul.AutoDeregistrationTimeout
-	} else if c.Consul.AutoDeregistrationTimeout != def.Consul.AutoDeregistrationTimeout && other.Consul.AutoDeregistrationTimeout != def.Consul.AutoDeregistrationTimeout {
+	} else if c.Consul.AutoDeregistrationTimeout != def.Consul.AutoDeregistrationTimeout &&
+		other.Consul.AutoDeregistrationTimeout != def.Consul.AutoDeregistrationTimeout &&
+		other.Consul.AutoDeregistrationTimeout != c.Consul.AutoDeregistrationTimeout {
 		return errors.New("Different CONSUL definition (different AutoDeregistrationTimeout) - specify same or only once")
 	}
 
 	c.Consul.Permanent = append(c.Consul.Permanent, other.Consul.Permanent...)
 	c.Consul.Dynamic = append(c.Consul.Dynamic, other.Consul.Dynamic...)
+
+	merged, err := mergeTelegram(c.Telegram, other.Telegram)
+	if err != nil {
+		return err
+	}
+	c.Telegram = merged
 	return nil
 }
 
@@ -87,6 +96,8 @@ func (config *Config) Run(sv container.Supervisor, ctx context.Context) error {
 	critical := plugin.NewCritical(sv, log.New(os.Stderr, "[critical-plugin] ", log.LstdFlags), config.Critical...)
 	sv.Events().AddHandler(critical)
 
+	// Initialize plugins
+	// -- consul
 	consulConfig := api.DefaultConfig()
 	consulConfig.Address = config.Consul.URL
 
@@ -104,8 +115,19 @@ func (config *Config) Run(sv container.Supervisor, ctx context.Context) error {
 	consulLogger := log.New(os.Stderr, "[consul-plugin] ", log.LstdFlags)
 	consulService := plugin.NewConsul(consul, config.Consul.TTL, config.Consul.AutoDeregistrationTimeout, consulLogger, consulRegs)
 	defer consulService.Close()
-
 	sv.Events().AddHandler(consulService)
+
+	// -- telegram
+	if config.Telegram != nil {
+		err := config.Telegram.Prepare()
+		if err != nil {
+			log.Println("telegram plugin ont initialized due to", err)
+		} else {
+			sv.Events().AddHandler(config.Telegram)
+		}
+	}
+
+	// Run
 	wg := sync.WaitGroup{}
 	for _, exec := range config.Services {
 		FillDefaultExecutable(&exec)
@@ -114,7 +136,6 @@ func (config *Config) Run(sv container.Supervisor, ctx context.Context) error {
 			defer wg.Done()
 			container.Wait(sv.Watch(ctx, exec.Factory, exec.Restart, exec.RestartTimeout, false))
 		}(exec)
-
 	}
 
 	wg.Wait()

@@ -31,7 +31,7 @@ Consul is a service registry and service discover system. MONEXEC can automatica
 
 Auto(de)registration available for `run` or `start` commands.
 
-Use general flag `--consul` (or env var `MONEXEC_CONSUL=true`) for enable Consul integration. Monexec will try register and update status of service in Consul local agent. 
+Use general flag `--consul` (or env var `MONEXEC_CONSUL=true`) for enable Consul integration. Monexec will try register and update status of service in Consul local agent.
 
 Monexec will continue work even if Consul becomes unavailable.
 
@@ -60,6 +60,53 @@ Suppose Consul agent is running in host `registry`
 
 ```bash
 monexec run --consul --consul-address "http://registry:8500" -l srv1 -- nc -l 9000
+```
+
+# How to integrate with Telegram
+
+Since `0.1.1` you can receive notifications over Telegram.
+
+You have to know:
+
+* BOT token : can be obtained here http://t.me/botfather
+* Receipients ChatID's : can be obtained here http://t.me/MyTelegramID_bot
+
+Message template (based on Golang templates) also required. We recommend use this:
+
+```
+*{{.label}}*
+Service {{.label}} {{.action}}
+{{if .error}}⚠️ *Error:*  {{.error}}{{end}}
+_time: {{.time}}_
+_host: {{.hostname}}_
+```
+
+Available params:
+
+* `.label` - name of service
+* `.action` - servce action. Can be `spawned` or `stopped`
+* `.time` - current time in UTC format with timezone
+* `.error` - error message available only on `stopped` action
+* `.hostname` - current hostname
+
+Configuration avaiable only from .yaml files:
+
+```yaml
+telegram:
+  # BOT token
+  token: "123456789:AAAAAAAAAAAAAAAAAAAAAA_BBBBBBBBBBBB"
+  services:
+      # services that will be monitored
+      - "listener2"
+  recipients:
+      # List of telegrams chat id
+      - 123456789
+  template: |
+    *{{.label}}*
+    Service {{.label}} {{.action}}
+    {{if .error}}⚠️ *Error:*  {{.error}}{{end}}
+    _time: {{.time}}_
+    _host: {{.hostname}}_
 ```
 
 # Usage

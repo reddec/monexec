@@ -10,3 +10,16 @@ services:
 consul:
   permanent:
   - listener2
+
+telegram:
+  token: "123456789:AAAAAAAAAAAAAAAAAAAAAA_BBBBBBBBBBBB"
+  services:
+      - "listener2"
+  recipients:
+      - 123456789
+  template: |
+    *{{.label}}*
+    Service {{.label}} {{.action}}
+    {{if .error}}⚠️ *Error:*  {{.error}}{{end}}
+    _time: {{.time}}_
+    _host: {{.hostname}}_
