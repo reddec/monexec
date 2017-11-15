@@ -1,34 +1,36 @@
 package main
 
 import (
-	"time"
-	"github.com/reddec/container"
-	"github.com/reddec/container/plugin"
-	"log"
-	"os"
-	"github.com/hashicorp/consul/api"
 	"context"
-	"sync"
-	"github.com/Pallinder/go-randomdata"
 	"errors"
 	"io/ioutil"
-	"strings"
-	"gopkg.in/yaml.v2"
-	"github.com/reddec/monexec/monexec"
+	"log"
+	"os"
 	"path"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/Pallinder/go-randomdata"
+	"github.com/hashicorp/consul/api"
+	"github.com/reddec/container"
+	"github.com/reddec/container/plugin"
+	"github.com/reddec/monexec/monexec"
+	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	Services []monexec.Executable                       `yaml:"services"`
-	Critical []string                                   `yaml:"critical,omitempty"`
-	Consul struct {
+	Services []monexec.Executable `yaml:"services"`
+	Critical []string             `yaml:"critical,omitempty"`
+	Consul   struct {
 		URL                       string        `yaml:"url"`
 		TTL                       time.Duration `yaml:"ttl"`
 		AutoDeregistrationTimeout time.Duration `yaml:"timeout"`
 		Dynamic                   []string      `yaml:"register,omitempty"`
 		Permanent                 []string      `yaml:"permanent,omitempty"`
-	}                                           `yaml:"consul"`
-	Telegram *Telegram                          `yaml:"telegram,omitempty"`
+	} `yaml:"consul"`
+	Telegram *Telegram `yaml:"telegram,omitempty"`
 }
 
 func (c *Config) MergeFrom(other *Config) error {
@@ -157,6 +159,7 @@ func LoadConfig(locations ...string) (*Config, error) {
 			}
 			files = fs
 		} else {
+			location = filepath.Dir(location)
 			files = []os.FileInfo{stat}
 		}
 		for _, info := range files {
@@ -165,7 +168,7 @@ func LoadConfig(locations ...string) (*Config, error) {
 				if err != nil {
 					return nil, err
 				}
-				var conf Config = DefaultConfig()
+				var conf = DefaultConfig()
 				err = yaml.Unmarshal(data, &conf)
 				if err != nil {
 					return nil, err
