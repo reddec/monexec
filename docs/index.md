@@ -11,6 +11,7 @@ It's tool for controlling processes like a **supervisord** but with some importa
 * Supports gracefull and fast shutdown by signals
 * Developed for used inside Docker containers
 * Different strategies for processes
+* Support template-based email notification
 
 [download for most major platform](https://github.com/reddec/monexec/releases)
 
@@ -108,6 +109,84 @@ telegram:
     _time: {{.time}}_
     _host: {{.hostname}}_
 ```
+# How to integrate with email
+
+Since `0.1.3` you can receive notifications over email.
+
+If you are using Google emails (tested):
+
+* Obtain application password https://myaccount.google.com/apppasswords
+* SMTP server will be: `smtp.gmail.com:587`
+
+Message template (based on Golang templates) also required. We recommend use this:
+
+```
+Content-Type: text/html
+Subject: {{.label}} {{.action}}
+
+<h2>{{.label}}</h2>
+
+<table>
+    <tr>
+        <th>Label</th>
+        <td>{{.label}}</td>
+    </tr>
+    <tr>
+        <th>ID</th>
+        <td>({{.id}})</td>
+    </tr>
+    <tr>
+        <th>Action</th>
+        <td>{{.action}}</td>
+    </tr>
+    <tr>
+        <th>Hostname</th>
+        <td>{{.hostname}}</td>
+    </tr>
+    <tr>
+        <th>Local time</th>
+        <td>{{.time}}</td>
+    </tr>
+    <tr>
+        <th>User</th>
+        <td>{{env "USER"}}</td>
+    </tr>
+</table>
+```
+
+Available params:
+
+* `.label` - name of service
+* `.action` - servce action. Can be `spawned` or `stopped`
+* `.time` - current time in UTC format with timezone
+* `.error` - error message available only on `stopped` action
+* `.hostname` - current hostname
+
+Plus all operations from http://masterminds.github.io/sprig/ (like `env` or `upper`)
+
+Configuration avaiable only from .yaml files:
+
+
+```yaml
+
+email:
+  services:
+    - myservice
+  smtp: "smtp.gmail.com:587"
+  from: "example-monitor@gmail.com"
+  password: "xyzzzyyyzyyzyz"
+  to:
+    - "admin1@example.com"
+    - "admin2@example.com"
+  template: |
+    Subject: {{.label}}
+
+    Service {{.label}} {{.action}}
+  templateFile: "./email.html"
+```
+
+`template` will be used as fallback for `templateFile`. If template file location is not absolute, it will be calculated
+from configuration directory.
 
 # Usage
 

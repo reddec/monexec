@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -18,19 +17,34 @@ import (
 	"github.com/reddec/container/plugin"
 	"github.com/reddec/monexec/monexec"
 	"gopkg.in/yaml.v2"
+	"github.com/reddec/monexec/plugins"
+	"github.com/mitchellh/mapstructure"
+	"errors"
 )
 
+type ConsulConfig struct {
+	URL                       string        `yaml:"url"`
+	TTL                       time.Duration `yaml:"ttl"`
+	AutoDeregistrationTimeout time.Duration `yaml:"timeout"`
+	Dynamic                   []string      `yaml:"register,omitempty"`
+	Permanent                 []string      `yaml:"permanent,omitempty"`
+}
+
+func DefaultConsulConfig() *ConsulConfig {
+	// Default params for Consul
+	return &ConsulConfig{
+		TTL:                       2 * time.Minute,
+		AutoDeregistrationTimeout: 5 * time.Minute,
+		URL:                       "http://localhost:8500",
+	}
+}
+
 type Config struct {
-	Services []monexec.Executable `yaml:"services"`
-	Critical []string             `yaml:"critical,omitempty"`
-	Consul   struct {
-		URL                       string        `yaml:"url"`
-		TTL                       time.Duration `yaml:"ttl"`
-		AutoDeregistrationTimeout time.Duration `yaml:"timeout"`
-		Dynamic                   []string      `yaml:"register,omitempty"`
-		Permanent                 []string      `yaml:"permanent,omitempty"`
-	} `yaml:"consul"`
-	Telegram *Telegram `yaml:"telegram,omitempty"`
+	Services      []monexec.Executable            `yaml:"services"`
+	Critical      []string                        `yaml:"critical,omitempty"`
+	Consul        *ConsulConfig                   `yaml:"consul,omitempty"`
+	Plugins       map[string]interface{}          `yaml:",inline"` // all unparsed means plugins
+	loadedPlugins map[string]plugins.PluginConfig `yaml:"-"`
 }
 
 func (c *Config) MergeFrom(other *Config) error {
@@ -38,44 +52,50 @@ func (c *Config) MergeFrom(other *Config) error {
 	c.Critical = append(c.Critical, other.Critical...)
 
 	def := DefaultConfig()
+	if c.Consul == nil {
+		c.Consul = other.Consul
+	} else if other.Consul != nil {
+		if c.Consul.URL == def.Consul.URL {
+			c.Consul.URL = other.Consul.URL
+		} else if c.Consul.URL != def.Consul.URL && other.Consul.URL != def.Consul.URL && other.Consul.URL != c.Consul.URL {
+			return errors.New("Different CONSUL definition (different URL) - specify same or only once")
+		}
 
-	if c.Consul.URL == def.Consul.URL {
-		c.Consul.URL = other.Consul.URL
-	} else if c.Consul.URL != def.Consul.URL && other.Consul.URL != def.Consul.URL && other.Consul.URL != c.Consul.URL {
-		return errors.New("Different CONSUL definition (different URL) - specify same or only once")
+		if c.Consul.TTL == def.Consul.TTL {
+			c.Consul.TTL = other.Consul.TTL
+		} else if c.Consul.TTL != def.Consul.TTL && other.Consul.TTL != def.Consul.TTL && other.Consul.TTL != c.Consul.TTL {
+			return errors.New("Different CONSUL definition (different TTL) - specify same or only once")
+		}
+
+		if c.Consul.AutoDeregistrationTimeout == def.Consul.AutoDeregistrationTimeout {
+			c.Consul.AutoDeregistrationTimeout = other.Consul.AutoDeregistrationTimeout
+		} else if c.Consul.AutoDeregistrationTimeout != def.Consul.AutoDeregistrationTimeout &&
+			other.Consul.AutoDeregistrationTimeout != def.Consul.AutoDeregistrationTimeout &&
+			other.Consul.AutoDeregistrationTimeout != c.Consul.AutoDeregistrationTimeout {
+			return errors.New("Different CONSUL definition (different AutoDeregistrationTimeout) - specify same or only once")
+		}
+
+		c.Consul.Permanent = append(c.Consul.Permanent, other.Consul.Permanent...)
+		c.Consul.Dynamic = append(c.Consul.Dynamic, other.Consul.Dynamic...)
 	}
-
-	if c.Consul.TTL == def.Consul.TTL {
-		c.Consul.TTL = other.Consul.TTL
-	} else if c.Consul.TTL != def.Consul.TTL && other.Consul.TTL != def.Consul.TTL && other.Consul.TTL != c.Consul.TTL {
-		return errors.New("Different CONSUL definition (different TTL) - specify same or only once")
+	// -- merge plugins
+	for otherPluginName, otherPluginInstance := range other.loadedPlugins {
+		if ownPlugin, needMerge := c.loadedPlugins[otherPluginName]; needMerge {
+			err := ownPlugin.MergeFrom(otherPluginInstance)
+			if err != nil {
+				return errors.New("merge " + otherPluginName + ": " + err.Error())
+			}
+		} else { // new one - just copy
+			c.loadedPlugins[otherPluginName] = otherPluginInstance
+		}
 	}
-
-	if c.Consul.AutoDeregistrationTimeout == def.Consul.AutoDeregistrationTimeout {
-		c.Consul.AutoDeregistrationTimeout = other.Consul.AutoDeregistrationTimeout
-	} else if c.Consul.AutoDeregistrationTimeout != def.Consul.AutoDeregistrationTimeout &&
-		other.Consul.AutoDeregistrationTimeout != def.Consul.AutoDeregistrationTimeout &&
-		other.Consul.AutoDeregistrationTimeout != c.Consul.AutoDeregistrationTimeout {
-		return errors.New("Different CONSUL definition (different AutoDeregistrationTimeout) - specify same or only once")
-	}
-
-	c.Consul.Permanent = append(c.Consul.Permanent, other.Consul.Permanent...)
-	c.Consul.Dynamic = append(c.Consul.Dynamic, other.Consul.Dynamic...)
-
-	merged, err := mergeTelegram(c.Telegram, other.Telegram)
-	if err != nil {
-		return err
-	}
-	c.Telegram = merged
 	return nil
 }
 
 func DefaultConfig() Config {
 	config := Config{}
-	// Default params for Consul
-	config.Consul.TTL = 2 * time.Minute
-	config.Consul.AutoDeregistrationTimeout = 5 * time.Minute
-	config.Consul.URL = "http://localhost:8500"
+
+	config.loadedPlugins = make(map[string]plugins.PluginConfig)
 	return config
 }
 
@@ -100,32 +120,35 @@ func (config *Config) Run(sv container.Supervisor, ctx context.Context) error {
 
 	// Initialize plugins
 	// -- consul
-	consulConfig := api.DefaultConfig()
-	consulConfig.Address = config.Consul.URL
+	if config.Consul != nil {
+		consulConfig := api.DefaultConfig()
+		consulConfig.Address = config.Consul.URL
 
-	consul, err := api.NewClient(consulConfig)
-	if err != nil {
-		return err
-	}
-	var consulRegs []plugin.ConsulRegistration
-	for _, label := range config.Consul.Dynamic {
-		consulRegs = append(consulRegs, plugin.ConsulRegistration{Permanent: false, Label: label})
-	}
-	for _, label := range config.Consul.Permanent {
-		consulRegs = append(consulRegs, plugin.ConsulRegistration{Permanent: true, Label: label})
-	}
-	consulLogger := log.New(os.Stderr, "[consul-plugin] ", log.LstdFlags)
-	consulService := plugin.NewConsul(consul, config.Consul.TTL, config.Consul.AutoDeregistrationTimeout, consulLogger, consulRegs)
-	defer consulService.Close()
-	sv.Events().AddHandler(consulService)
-
-	// -- telegram
-	if config.Telegram != nil {
-		err := config.Telegram.Prepare()
+		consul, err := api.NewClient(consulConfig)
 		if err != nil {
-			log.Println("telegram plugin ont initialized due to", err)
+			return err
+		}
+		var consulRegs []plugin.ConsulRegistration
+		for _, label := range config.Consul.Dynamic {
+			consulRegs = append(consulRegs, plugin.ConsulRegistration{Permanent: false, Label: label})
+		}
+		for _, label := range config.Consul.Permanent {
+			consulRegs = append(consulRegs, plugin.ConsulRegistration{Permanent: true, Label: label})
+		}
+		consulLogger := log.New(os.Stderr, "[consul-plugin] ", log.LstdFlags)
+		consulService := plugin.NewConsul(consul, config.Consul.TTL, config.Consul.AutoDeregistrationTimeout, consulLogger, consulRegs)
+		defer consulService.Close()
+		sv.Events().AddHandler(consulService)
+	}
+
+	//-- prepare and add all plugins
+	for pluginName, pluginInstance := range config.loadedPlugins {
+		err := pluginInstance.Prepare()
+		if err != nil {
+			log.Println("failed prepare plugin", pluginName, "-", err)
 		} else {
-			sv.Events().AddHandler(config.Telegram)
+			log.Println("plugin", pluginName, "ready")
+			sv.Events().AddHandler(pluginInstance)
 		}
 	}
 
@@ -164,7 +187,8 @@ func LoadConfig(locations ...string) (*Config, error) {
 		}
 		for _, info := range files {
 			if strings.HasSuffix(info.Name(), ".yml") || strings.HasSuffix(info.Name(), ".yaml") {
-				data, err := ioutil.ReadFile(path.Join(location, info.Name()))
+				fileName := path.Join(location, info.Name())
+				data, err := ioutil.ReadFile(fileName)
 				if err != nil {
 					return nil, err
 				}
@@ -173,6 +197,22 @@ func LoadConfig(locations ...string) (*Config, error) {
 				if err != nil {
 					return nil, err
 				}
+
+				// -- load all plugins for current config here
+				for pluginName, description := range conf.Plugins {
+					pluginInstance, found := plugins.BuildPlugin(pluginName, fileName)
+					if !found {
+						log.Println("plugin", pluginName, "not found")
+						continue
+					}
+					err := mapstructure.Decode(description, pluginInstance)
+					if err != nil {
+						log.Println("failed load plugin", pluginName, "-", err)
+						continue
+					}
+					conf.loadedPlugins[pluginName] = pluginInstance
+				}
+
 				err = ans.MergeFrom(&conf)
 				if err != nil {
 					return nil, err

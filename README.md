@@ -14,6 +14,7 @@ It’s tool for controlling processes like a supervisord but with some important
 * Supports gracefull and fast shutdown by signals
 * Developed for used inside Docker containers
 * Different strategies for processes
+* Support template-based email notification
 
 ## Installing
 
@@ -30,3 +31,61 @@ go get -v -u github.com/reddec/monexec/...
 Usage: [https://reddec.github.io/monexec/](https://reddec.github.io/monexec/)
 
 API: [Godoc](http://godoc.org/github.com/reddec/monexec/monexec)
+
+
+## Examples
+
+See documentation for details [https://reddec.github.io/monexec/](https://reddec.github.io/monexec/)
+
+### Run from cmd
+
+```bash
+monexec run -l srv1 --consul -- nc -l 9000
+```
+
+### Run from config
+
+```bash
+monexec start ./myservice.yaml
+```
+
+### Notifications
+
+Add notification to Telegram
+
+```yaml
+telegram:
+  # BOT token
+  token: "123456789:AAAAAAAAAAAAAAAAAAAAAA_BBBBBBBBBBBB"
+  services:
+      # services that will be monitored
+      - "listener2"
+  recipients:
+      # List of telegrams chat id
+      - 123456789
+  template: |
+    *{{.label}}*
+    Service {{.label}} {{.action}}
+    {{if .error}}⚠️ *Error:*  {{.error}}{{end}}
+    _time: {{.time}}_
+    _host: {{.hostname}}_
+```
+
+#### Email
+
+Add email notification
+
+```yaml
+email:
+  services:
+    - myservice
+  smtp: "smtp.gmail.com:587"
+  from: "example-monitor@gmail.com"
+  password: "xyzzzyyyzyyzyz"
+  to:
+    - "admin1@example.com"
+  template: |
+    Subject: {{.label}}
+
+    Service {{.label}} {{.action}}
+```

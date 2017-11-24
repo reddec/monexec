@@ -23,3 +23,13 @@ telegram:
     {{if .error}}⚠️ *Error:*  {{.error}}{{end}}
     _time: {{.time}}_
     _host: {{.hostname}}_
+
+email:
+  services:
+    - listener2
+  smtp: "smtp.gmail.com:587"
+  from: "sample@gmail.com"
+  password: "xxxxxxxxxxxxxxxxxxxx"
+  to:
+    - "admin1@example.com"
+  templateFile: "./email.html"

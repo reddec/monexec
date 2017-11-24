@@ -1,0 +1,31 @@
+Content-Type: text/html
+Subject: {{.label}} {{.action}}
+
+<h2>{{.label}}</h2>
+
+<table>
+    <tr>
+        <th>Label</th>
+        <td>{{.label}}</td>
+    </tr>
+    <tr>
+        <th>ID</th>
+        <td>({{.id}})</td>
+    </tr>
+    <tr>
+        <th>Action</th>
+        <td>{{.action}}</td>
+    </tr>
+    <tr>
+        <th>Hostname</th>
+        <td>{{.hostname}}</td>
+    </tr>
+    <tr>
+        <th>Local time</th>
+        <td>{{.time}}</td>
+    </tr>
+    <tr>
+        <th>User</th>
+        <td>{{env "USER"}}</td>
+    </tr>
+</table>

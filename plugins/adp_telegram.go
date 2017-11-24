@@ -1,4 +1,4 @@
-package main
+package plugins
 
 import (
 	"github.com/reddec/container"
@@ -7,8 +7,8 @@ import (
 	"os"
 	"bytes"
 	"gopkg.in/telegram-bot-api.v4"
-	"github.com/pkg/errors"
 	"time"
+	"errors"
 )
 
 type Telegram struct {
@@ -17,10 +17,10 @@ type Telegram struct {
 	Services   []string `yaml:"services"`
 	Template   string   `yaml:"template"`
 
-	servicesSet map[string]bool     `yaml:"-"`
-	templateBin *template.Template  `yaml:"-"`
-	logger      *log.Logger         `yaml:"-"`
-	bot         *tgbotapi.BotAPI    `yaml:"-"`
+	servicesSet map[string]bool    `yaml:"-"`
+	templateBin *template.Template `yaml:"-"`
+	logger      *log.Logger        `yaml:"-"`
+	bot         *tgbotapi.BotAPI   `yaml:"-"`
 	hostname    string
 }
 
@@ -89,32 +89,27 @@ func (c *Telegram) Spawned(runnable container.Runnable, id container.ID) {
 	}
 }
 
-func mergeTelegram(a *Telegram, b *Telegram) (*Telegram, error) {
-	if a == nil {
-		return b, nil
-	}
-	if b == nil {
-		return a, nil
-	}
+func (a *Telegram) MergeFrom(other interface{}) (error) {
+	b := other.(*Telegram)
 	if a.Token == "" {
 		a.Token = b.Token
 	}
-	if b.Token == "" {
-		b.Token = a.Token
-	}
 	if a.Token != b.Token {
-		return nil, errors.New("token are different")
+		return errors.New("token are different")
 	}
 	if a.Template == "" {
 		a.Template = b.Template
 	}
-	if b.Template == "" {
-		b.Template = a.Template
-	}
 	if a.Template != b.Template {
-		return nil, errors.New("different templates")
+		return errors.New("different templates")
 	}
 	a.Recipients = append(a.Recipients, b.Recipients...)
 	a.Services = append(a.Services, b.Services...)
-	return a, nil
+	return nil
+}
+
+func init() {
+	registerPlugin("telegram", func(string) PluginConfig {
+		return new(Telegram)
+	})
 }

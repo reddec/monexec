@@ -50,11 +50,12 @@ func run() {
 		Environment:    *runEnv,
 	})
 	FillDefaultExecutable(&config.Services[0])
-	config.Consul.URL = *runConsulAddress
-	config.Consul.TTL = *runConsulTTL
-	config.Consul.AutoDeregistrationTimeout = *runConsulDeRegTTL
 
 	if *runConsulEnable {
+		config.Consul = DefaultConsulConfig()
+		config.Consul.URL = *runConsulAddress
+		config.Consul.TTL = *runConsulTTL
+		config.Consul.AutoDeregistrationTimeout = *runConsulDeRegTTL
 		if *runConsulPermanent {
 			config.Consul.Permanent = append(config.Consul.Permanent, config.Services[0].Name)
 		} else {
@@ -79,7 +80,6 @@ func start() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("TTL",config.Consul.TTL)
 	sv := container.NewSupervisor(log.New(os.Stderr, "[supervisor] ", log.LstdFlags))
 	runConfigInSupervisor(config, sv)
 }
