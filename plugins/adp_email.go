@@ -1,9 +1,7 @@
 package plugins
 
 import (
-	"bytes"
 	"github.com/reddec/container"
-	"time"
 	"log"
 	"os"
 	"net/smtp"
@@ -13,13 +11,12 @@ import (
 )
 
 type Email struct {
-	Smtp         string   `yaml:"smtp"`
-	From         string   `yaml:"from"`
-	Password     string   `yaml:"password"`
-	To           []string `yaml:"to"`
-	Template     string   `yaml:"template"`
-	TemplateFile string   `yaml:"templateFile"` // template file (relative to config dir) has priority. Template supports basic utils
-	Services     []string `yaml:"services"`
+	Smtp     string   `yaml:"smtp"`
+	From     string   `yaml:"from"`
+	Password string   `yaml:"password"`
+	To       []string `yaml:"to"`
+	Services []string `yaml:"services"`
+	withTemplate       `mapstructure:",squash" yaml:",inline"`
 
 	log         *log.Logger
 	hostname    string
@@ -27,24 +24,11 @@ type Email struct {
 	workDir     string
 }
 
-func (c *Email) renderAndSend(params map[string]interface{}) {
-	message := &bytes.Buffer{}
-
-	parser, err := parseFileOrTemplate(c.TemplateFile, c.Template, c.log)
-	if err != nil {
-		c.log.Println("failed parse template:", err)
-		return
-	}
-	renderErr := parser.Execute(message, params)
-	if renderErr != nil {
-		c.log.Println("failed render:", renderErr, "; params:", params)
-		return
-	}
-
-	c.log.Println(message.String())
+func (c *Email) renderAndSend(message string) {
+	c.log.Println(message)
 	host, _, _ := net.SplitHostPort(c.Smtp)
 	auth := smtp.PlainAuth("", c.From, c.Password, host)
-	err = smtp.SendMail(c.Smtp, auth, c.From, c.To, message.Bytes())
+	err := smtp.SendMail(c.Smtp, auth, c.From, c.To, []byte(message))
 	if err != nil {
 		c.log.Println("failed send mail:", err)
 	} else {
@@ -54,14 +38,12 @@ func (c *Email) renderAndSend(params map[string]interface{}) {
 
 func (c *Email) Spawned(runnable container.Runnable, id container.ID) {
 	if c.servicesSet[runnable.Label()] {
-		params := map[string]interface{}{
-			"action":   "spawned",
-			"id":       id,
-			"label":    runnable.Label(),
-			"hostname": c.hostname,
-			"time":     time.Now().String(),
+		content, renderErr := c.renderDefault("spawned", string(id), runnable.Label(), nil, c.log)
+		if renderErr != nil {
+			c.log.Println("failed render:", renderErr)
+		} else {
+			c.renderAndSend(content)
 		}
-		c.renderAndSend(params)
 	}
 }
 
@@ -74,15 +56,12 @@ func (c *Email) Prepare() error {
 
 func (c *Email) Stopped(runnable container.Runnable, id container.ID, err error) {
 	if c.servicesSet[runnable.Label()] {
-		params := map[string]interface{}{
-			"action":   "stopped",
-			"id":       id,
-			"error":    err,
-			"label":    runnable.Label(),
-			"hostname": c.hostname,
-			"time":     time.Now().String(),
+		content, renderErr := c.renderDefault("stopped", string(id), runnable.Label(), err, c.log)
+		if renderErr != nil {
+			c.log.Println("failed render:", renderErr)
+		} else {
+			c.renderAndSend(content)
 		}
-		c.renderAndSend(params)
 	}
 }
 

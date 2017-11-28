@@ -15,6 +15,7 @@ It’s tool for controlling processes like a supervisord but with some important
 * Developed for used inside Docker containers
 * Different strategies for processes
 * Support template-based email notification
+* Support HTTP notification
 
 ## Installing
 
@@ -88,4 +89,16 @@ email:
     Subject: {{.label}}
 
     Service {{.label}} {{.action}}
+```
+
+#### HTTP
+
+Add HTTP request as notification
+
+```yaml
+http:
+  services:
+    - myservice
+  url: "http://example.com/{{.label}}/{{.action}}"
+  templateFile: "./body.txt"
 ```

@@ -2,25 +2,23 @@ package plugins
 
 import (
 	"github.com/reddec/container"
-	"text/template"
 	"log"
 	"os"
-	"bytes"
 	"gopkg.in/telegram-bot-api.v4"
-	"time"
 	"errors"
+	"path/filepath"
 )
 
 type Telegram struct {
 	Token      string   `yaml:"token"`
 	Recipients []int64  `yaml:"recipients"`
 	Services   []string `yaml:"services"`
-	Template   string   `yaml:"template"`
+	withTemplate        `mapstructure:",squash" yaml:",inline"`
 
-	servicesSet map[string]bool    `yaml:"-"`
-	templateBin *template.Template `yaml:"-"`
-	logger      *log.Logger        `yaml:"-"`
-	bot         *tgbotapi.BotAPI   `yaml:"-"`
+	servicesSet map[string]bool  `yaml:"-"`
+	logger      *log.Logger      `yaml:"-"`
+	bot         *tgbotapi.BotAPI `yaml:"-"`
+	workDir     string
 	hostname    string
 }
 
@@ -29,11 +27,6 @@ func (c *Telegram) Prepare() error {
 	for _, srv := range c.Services {
 		c.servicesSet[srv] = true
 	}
-	t, err := template.New("").Parse(c.Template)
-	if err != nil {
-		return err
-	}
-	c.templateBin = t
 	c.logger = log.New(os.Stderr, "[telegram] ", log.LstdFlags)
 	bot, err := tgbotapi.NewBotAPI(c.Token)
 	if err != nil {
@@ -46,46 +39,35 @@ func (c *Telegram) Prepare() error {
 
 func (c *Telegram) Stopped(runnable container.Runnable, id container.ID, err error) {
 	if c.servicesSet[runnable.Label()] {
-		params := map[string]interface{}{
-			"action":   "stopped",
-			"id":       id,
-			"error":    err,
-			"label":    runnable.Label(),
-			"hostname": c.hostname,
-			"time":     time.Now().String(),
+		content, renderErr := c.renderDefault("stopped", string(id), runnable.Label(), err, c.logger)
+		if renderErr != nil {
+			c.logger.Println("failed render:", renderErr)
+		} else {
+			c.renderAndSend(content)
 		}
-		c.renderAndSend(params)
 	}
 }
 
-func (c *Telegram) renderAndSend(params map[string]interface{}) {
-	message := &bytes.Buffer{}
-	renderErr := c.templateBin.Execute(message, params)
-	if renderErr != nil {
-		c.logger.Println("failed render:", renderErr, "; params:", params)
-	} else {
-		msg := tgbotapi.NewMessage(0, message.String())
-		msg.ParseMode = "markdown"
-		for _, r := range c.Recipients {
-			msg.ChatID = r
-			_, err := c.bot.Send(msg)
-			if err != nil {
-				c.logger.Println("failed send message to", r, "due to", err)
-			}
+func (c *Telegram) renderAndSend(message string) {
+	msg := tgbotapi.NewMessage(0, message)
+	msg.ParseMode = "markdown"
+	for _, r := range c.Recipients {
+		msg.ChatID = r
+		_, err := c.bot.Send(msg)
+		if err != nil {
+			c.logger.Println("failed send message to", r, "due to", err)
 		}
 	}
 }
 
 func (c *Telegram) Spawned(runnable container.Runnable, id container.ID) {
 	if c.servicesSet[runnable.Label()] {
-		params := map[string]interface{}{
-			"action":   "spawned",
-			"id":       id,
-			"label":    runnable.Label(),
-			"hostname": c.hostname,
-			"time":     time.Now().String(),
+		content, renderErr := c.renderDefault("spawned", string(id), runnable.Label(), nil, c.logger)
+		if renderErr != nil {
+			c.logger.Println("failed render:", renderErr)
+		} else {
+			c.renderAndSend(content)
 		}
-		c.renderAndSend(params)
 	}
 }
 
@@ -97,11 +79,10 @@ func (a *Telegram) MergeFrom(other interface{}) (error) {
 	if a.Token != b.Token {
 		return errors.New("token are different")
 	}
-	if a.Template == "" {
-		a.Template = b.Template
-	}
-	if a.Template != b.Template {
-		return errors.New("different templates")
+	a.withTemplate.resolvePath(a.workDir)
+	b.withTemplate.resolvePath(b.workDir)
+	if err := a.withTemplate.MergeFrom(&b.withTemplate); err != nil {
+		return err
 	}
 	a.Recipients = append(a.Recipients, b.Recipients...)
 	a.Services = append(a.Services, b.Services...)
@@ -109,7 +90,7 @@ func (a *Telegram) MergeFrom(other interface{}) (error) {
 }
 
 func init() {
-	registerPlugin("telegram", func(string) PluginConfig {
-		return new(Telegram)
+	registerPlugin("telegram", func(file string) PluginConfig {
+		return &Telegram{workDir: filepath.Dir(file)}
 	})
 }

@@ -1,0 +1,15 @@
+services:
+- label: listener3
+  command: /bin/bash
+  args:
+  - -c
+  - nc -l 9001
+  stop_timeout: 5s
+  restart_delay: 5s
+  restart: -1
+
+http:
+  services:
+    - listener3
+  url: "http://127.0.0.1:9000/{{.label}}/{{.action}}"
+  templateFile: "./email.html"

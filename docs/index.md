@@ -1,3 +1,4 @@
+
 # MONEXEC
 
 [![GitHub release](https://img.shields.io/github/release/reddec/monexec.svg)](https://github.com/reddec/monexec/releases)
@@ -109,6 +110,9 @@ telegram:
     _time: {{.time}}_
     _host: {{.hostname}}_
 ```
+
+Since `0.1.4` you also can specify `templateFile` instead of `template`
+
 # How to integrate with email
 
 Since `0.1.3` you can receive notifications over email.
@@ -187,6 +191,39 @@ email:
 
 `template` will be used as fallback for `templateFile`. If template file location is not absolute, it will be calculated
 from configuration directory.
+
+# How to integrate with HTTP
+
+Since `0.1.4` you can send notifications over HTTP
+
+* Supports any kind of methods (by default - `POST` but can be changed in `http.method`)
+* **Body** - template-based text same as in `Telegram` or `Email` plugin
+* **URL** - also template-based text (yes, with same rules as in `body` ;-) )
+* **Headers** - you can also provide any headers (no, no templates here)
+* **Timeout** - limit time for request. By default - `20s`
+
+Configuration avaiable only from .yaml files:
+
+```yaml
+http:
+  services:
+    - myservice
+  url: "http://example.com/{{.label}}/{{.action}}"
+  templateFile: "./body.txt"
+```
+
+`template` will be used as fallback for `templateFile`. If template file location is not absolute, it will be calculated from configuration directory.
+
+
+|Parameter     | Type     | Required | Default | Description |
+|--------------|----------|----------|---------|-------------|
+|`url`         |`string`  |   yes    |         | Target URL
+|`method`      |`string`  |   no     | POST    | HTTP method
+|`services`    |`list`    |   yes    |         | List of services that will trigger plugin
+|`headers`     |`map`     |   no     | {}      | Map (string -> string) of additional headers per request
+|`timeout`     |`duration`|   no     | 20s     | Request timeout
+|`template`    |`string`  |   no     | ''      | Template string
+|`templateFile`|`string`  |   no     | ''      | Path to file of template (more priority then `template`, but `template` will be used as fallback)
 
 # Usage
 
