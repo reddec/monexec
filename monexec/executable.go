@@ -10,6 +10,7 @@ import (
 	"sync"
 	"context"
 	"github.com/reddec/container"
+	"strings"
 )
 
 // Executable - basic information about process
@@ -22,6 +23,7 @@ type Executable struct {
 	StopTimeout    time.Duration     `yaml:"stop_timeout,omitempty"`  // Timeout before terminate process
 	RestartTimeout time.Duration     `yaml:"restart_delay,omitempty"` // Restart delay
 	Restart        int               `yaml:"restart,omitempty"`       // How much restart allowed. -1 infinite
+	LogFile        string            `yaml:"logFile,omitempty"`       // if empty - only to log
 }
 
 // Arg adds additional positional argument
@@ -103,12 +105,6 @@ func (exe *runnable) Run(ctx context.Context) error {
 		return err
 	}
 
-	err = cmd.Start()
-	if err != nil {
-		return err
-	}
-
-	exe.logger.Println("Started with PID", cmd.Process.Pid)
 	res := make(chan error, 1)
 	dumpDone := sync.WaitGroup{}
 	dumpDone.Add(2)
@@ -116,6 +112,14 @@ func (exe *runnable) Run(ctx context.Context) error {
 		defer dumpDone.Done()
 		dumpToLogger(stdout, exe.logger)
 	}()
+
+	err = cmd.Start()
+	if err == nil {
+		exe.logger.Println("Started with PID", cmd.Process.Pid)
+	} else {
+		exe.logger.Println("Failed start `", exe.Command, strings.Join(exe.Args, " "), "` :", err)
+	}
+
 	go func() {
 		defer dumpDone.Done()
 		dumpToLogger(stderr, exe.logger)
