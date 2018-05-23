@@ -7,10 +7,10 @@ import (
 	"io"
 	"log"
 	"bufio"
-	"sync"
 	"context"
 	"github.com/reddec/container"
 	"strings"
+	"path/filepath"
 )
 
 // Executable - basic information about process
@@ -23,7 +23,7 @@ type Executable struct {
 	StopTimeout    time.Duration     `yaml:"stop_timeout,omitempty"`  // Timeout before terminate process
 	RestartTimeout time.Duration     `yaml:"restart_delay,omitempty"` // Restart delay
 	Restart        int               `yaml:"restart,omitempty"`       // How much restart allowed. -1 infinite
-	LogFile        string            `yaml:"logFile,omitempty"`       // if empty - only to log
+	LogFile        string            `yaml:"logFile,omitempty"`       // if empty - only to log. If not absolute - relative to workdir
 }
 
 // Arg adds additional positional argument
@@ -96,41 +96,46 @@ func (exe *runnable) Run(ctx context.Context) error {
 
 	setAttrs(cmd)
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return err
-	}
+	var outputs []io.Writer
+
+	outputs = append(outputs, NewLoggerStream(exe.logger, "out:"))
 
 	res := make(chan error, 1)
-	dumpDone := sync.WaitGroup{}
-	dumpDone.Add(2)
-	go func() {
-		defer dumpDone.Done()
-		dumpToLogger(stdout, exe.logger)
-	}()
 
-	err = cmd.Start()
+	if exe.LogFile != "" {
+		pth, _ := filepath.Abs(exe.LogFile)
+		if pth != exe.LogFile {
+			// relative
+			wd, _ := filepath.Abs(exe.WorkDir)
+			exe.LogFile = filepath.Join(wd, exe.LogFile)
+		}
+		logFile, err := os.OpenFile(exe.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+		if err != nil {
+			exe.logger.Println("Failed open log file:", err)
+		} else {
+			defer logFile.Close()
+			outputs = append(outputs, logFile)
+		}
+	}
+
+	logStream := io.MultiWriter(outputs...)
+
+	cmd.Stderr = logStream
+	cmd.Stdout = logStream
+
+	err := cmd.Start()
 	if err == nil {
 		exe.logger.Println("Started with PID", cmd.Process.Pid)
 	} else {
 		exe.logger.Println("Failed start `", exe.Command, strings.Join(exe.Args, " "), "` :", err)
 	}
 
-	go func() {
-		defer dumpDone.Done()
-		dumpToLogger(stderr, exe.logger)
-	}()
 	go func() { res <- cmd.Wait() }()
 	select {
 	case <-ctx.Done():
 		err = exe.stopOrKill(exe.logger, cmd, res)
 	case err = <-res:
 	}
-	dumpDone.Wait()
 	return err
 }
 

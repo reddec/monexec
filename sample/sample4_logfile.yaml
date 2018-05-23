@@ -1,0 +1,11 @@
+services:
+- label: listener4
+  command: nc
+  logFile: listener4.log
+  args:
+  - -v
+  - -l
+  - 9001
+  stop_timeout: 5s
+  restart_delay: 5s
+  restart: -1
