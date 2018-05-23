@@ -2,3 +2,4 @@
 build
 .goxc.local.json
 vendor/
+dist

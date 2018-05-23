@@ -1,4 +1,4 @@
-package main
+package monexec
 
 import (
 	"context"
@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/consul/api"
 	"github.com/reddec/container"
 	"github.com/reddec/container/plugin"
-	"github.com/reddec/monexec/monexec"
 	"gopkg.in/yaml.v2"
 	"github.com/reddec/monexec/plugins"
 	"github.com/mitchellh/mapstructure"
@@ -40,7 +39,7 @@ func DefaultConsulConfig() *ConsulConfig {
 }
 
 type Config struct {
-	Services      []monexec.Executable            `yaml:"services"`
+	Services      []Executable                    `yaml:"services"`
 	Critical      []string                        `yaml:"critical,omitempty"`
 	Consul        *ConsulConfig                   `yaml:"consul,omitempty"`
 	Plugins       map[string]interface{}          `yaml:",inline"` // all unparsed means plugins
@@ -99,7 +98,7 @@ func DefaultConfig() Config {
 	return config
 }
 
-func FillDefaultExecutable(exec *monexec.Executable) {
+func FillDefaultExecutable(exec *Executable) {
 	if exec.RestartTimeout == 0 {
 		exec.RestartTimeout = 6 * time.Second
 	}
@@ -157,7 +156,7 @@ func (config *Config) Run(sv container.Supervisor, ctx context.Context) error {
 	for _, exec := range config.Services {
 		FillDefaultExecutable(&exec)
 		wg.Add(1)
-		go func(exec monexec.Executable) {
+		go func(exec Executable) {
 			defer wg.Done()
 			container.Wait(sv.Watch(ctx, exec.Factory, exec.Restart, exec.RestartTimeout, false))
 		}(exec)

@@ -13,6 +13,9 @@ import (
 )
 
 var (
+	version = "dev"
+)
+var (
 	runCommand      = kingpin.Command("run", "Run single executable")
 	runGenerate     = runCommand.Flag("generate", "Generate instead of run YAML configuration based on args").Bool()
 	runBin          = runCommand.Arg("command", "Path to executable").Required().String()
@@ -37,7 +40,7 @@ var (
 )
 
 func run() {
-	config := DefaultConfig()
+	config := monexec.DefaultConfig()
 
 	config.Services = append(config.Services, monexec.Executable{
 		Name:           *runLabel,
@@ -49,10 +52,10 @@ func run() {
 		WorkDir:        *runWorkDir,
 		Environment:    *runEnv,
 	})
-	FillDefaultExecutable(&config.Services[0])
+	monexec.FillDefaultExecutable(&config.Services[0])
 
 	if *runConsulEnable {
-		config.Consul = DefaultConsulConfig()
+		config.Consul =  monexec.DefaultConsulConfig()
 		config.Consul.URL = *runConsulAddress
 		config.Consul.TTL = *runConsulTTL
 		config.Consul.AutoDeregistrationTimeout = *runConsulDeRegTTL
@@ -76,7 +79,7 @@ func run() {
 }
 
 func start() {
-	config, err := LoadConfig(*startSources...)
+	config, err :=  monexec.LoadConfig(*startSources...)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -84,7 +87,7 @@ func start() {
 	runConfigInSupervisor(config, sv)
 }
 
-func runConfigInSupervisor(config *Config, sv container.Supervisor) {
+func runConfigInSupervisor(config * monexec.Config, sv container.Supervisor) {
 	ctx, stop := context.WithCancel(context.Background())
 
 	c := make(chan os.Signal, 2)
@@ -104,7 +107,7 @@ func runConfigInSupervisor(config *Config, sv container.Supervisor) {
 }
 
 func main() {
-	kingpin.Version("0.1.0").DefaultEnvars()
+	kingpin.Version(version).DefaultEnvars()
 	switch kingpin.Parse() {
 	case "run":
 		run()
