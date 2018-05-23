@@ -1,4 +1,5 @@
 
+
 # MONEXEC
 
 [![GitHub release](https://img.shields.io/github/release/reddec/monexec.svg)](https://github.com/reddec/monexec/releases)
@@ -334,6 +335,24 @@ consul:
   register:
   - srvExt1
 ```
+# How to log to file a service
+
+Since `0.1.5`  you can copy content of STDERR/STDOUT  service output to specific file: option `logFile` in service section. If file path not absolute log file is putted relative to working directory.
+
+```yaml
+services:
+- label: listener4
+  command: nc
+  logFile: /var/log/listener4.log
+  args:
+  - -v
+  - -l
+  - 9001
+  stop_timeout: 5s
+  restart_delay: 5s
+  restart: -1
+
+```
 
 # Critical services
 
@@ -374,3 +393,4 @@ critical:
   - consul
 
 ```
+
