@@ -2,7 +2,7 @@
 
 // +build !linux
 
-package monexec
+package pool
 
 import (
 	"os/exec"

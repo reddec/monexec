@@ -103,21 +103,6 @@
   version = "v0.8.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/reddec/container"
-  packages = [
-    ".",
-    "plugin"
-  ]
-  revision = "88ac0953e759356661b80598d50b13dedc532e53"
-
-[[projects]]
-  name = "github.com/satori/go.uuid"
-  packages = ["."]
-  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
-  version = "v1.2.0"
-
-[[projects]]
   name = "github.com/technoweenie/multipartstreamer"
   packages = ["."]
   revision = "a90a01d73ae432e2611d178c18367fbaa13e0154"
@@ -152,6 +137,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "76b0216ac1b31ae5ed5f78312cf3be1230ef15c7868371013573080a32e1761b"
+  inputs-digest = "c51337c017e9d7e4a6f2a5cd5df887ce11955a3c19e26c618b25574f6db0b8d9"
   solver-name = "gps-cdcl"
   solver-version = 1

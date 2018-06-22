@@ -4,12 +4,13 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/yaml.v2"
 	"os"
-	"github.com/reddec/container"
 	"context"
 	"log"
 	"github.com/reddec/monexec/monexec"
 	"os/signal"
 	"syscall"
+	"github.com/reddec/monexec/plugins"
+	"github.com/reddec/monexec/pool"
 )
 
 var (
@@ -42,7 +43,7 @@ var (
 func run() {
 	config := monexec.DefaultConfig()
 
-	config.Services = append(config.Services, monexec.Executable{
+	config.Services = append(config.Services, pool.Executable{
 		Name:           *runLabel,
 		Command:        *runBin,
 		Args:           *runArgs,
@@ -55,14 +56,17 @@ func run() {
 	monexec.FillDefaultExecutable(&config.Services[0])
 
 	if *runConsulEnable {
-		config.Consul =  monexec.DefaultConsulConfig()
-		config.Consul.URL = *runConsulAddress
-		config.Consul.TTL = *runConsulTTL
-		config.Consul.AutoDeregistrationTimeout = *runConsulDeRegTTL
+		plg := plugins.DefaultConsul()
+		plg.URL = *runConsulAddress
+		plg.TTL = *runConsulTTL
+		plg.AutoDeregistrationTimeout = *runConsulDeRegTTL
 		if *runConsulPermanent {
-			config.Consul.Permanent = append(config.Consul.Permanent, config.Services[0].Name)
+			plg.Permanent = append(plg.Permanent, config.Services[0].Name)
 		} else {
-			config.Consul.Dynamic = append(config.Consul.Dynamic, config.Services[0].Name)
+			plg.Dynamic = append(plg.Dynamic, config.Services[0].Name)
+		}
+		config.Plugins = map[string]interface{}{
+			"consul": &plg,
 		}
 	}
 
@@ -73,25 +77,25 @@ func run() {
 		}
 		os.Stdout.Write(data)
 	} else {
-		sv := container.NewSupervisor(log.New(os.Stderr, "[supervisor] ", log.LstdFlags))
-		runConfigInSupervisor(&config, sv)
+
+		runConfigInSupervisor(&config, &pool.Pool{})
 	}
 }
 
 func start() {
-	config, err :=  monexec.LoadConfig(*startSources...)
+	config, err := monexec.LoadConfig(*startSources...)
 	if err != nil {
 		log.Fatal(err)
 	}
-	sv := container.NewSupervisor(log.New(os.Stderr, "[supervisor] ", log.LstdFlags))
-	runConfigInSupervisor(config, sv)
+
+	runConfigInSupervisor(config, &pool.Pool{})
 }
 
-func runConfigInSupervisor(config * monexec.Config, sv container.Supervisor) {
+func runConfigInSupervisor(config *monexec.Config, sv *pool.Pool) {
 	ctx, stop := context.WithCancel(context.Background())
 
 	c := make(chan os.Signal, 2)
-	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 	go func() {
 		for range c {
 			stop()
@@ -104,6 +108,16 @@ func runConfigInSupervisor(config * monexec.Config, sv container.Supervisor) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	done := sv.Done()
+	select {
+	case <-ctx.Done():
+		sv.Terminate()
+		<-done
+	case <-done:
+
+	}
+	stop()
+	config.ClosePlugins()
 }
 
 func main() {

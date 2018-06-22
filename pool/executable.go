@@ -1,4 +1,4 @@
-package monexec
+package pool
 
 import (
 	"time"
@@ -6,11 +6,10 @@ import (
 	"os"
 	"io"
 	"log"
-	"bufio"
 	"context"
-	"github.com/reddec/container"
 	"strings"
 	"path/filepath"
+	"sync"
 )
 
 // Executable - basic information about process
@@ -24,6 +23,16 @@ type Executable struct {
 	RestartTimeout time.Duration     `yaml:"restart_delay,omitempty"` // Restart delay
 	Restart        int               `yaml:"restart,omitempty"`       // How much restart allowed. -1 infinite
 	LogFile        string            `yaml:"logFile,omitempty"`       // if empty - only to log. If not absolute - relative to workdir
+
+	log        *log.Logger
+	loggerInit sync.Once
+}
+
+func (b *Executable) WithName(name string) *Executable {
+	cp := *b
+	cp.loggerInit = sync.Once{}
+	cp.Name = name
+	return &cp
 }
 
 // Arg adds additional positional argument
@@ -41,46 +50,34 @@ func (b *Executable) Env(arg, value string) *Executable {
 	return b
 }
 
-// Factory of executables
-func (e *Executable) Factory() (container.Runnable, error) {
-	return &runnable{Executable: *e, logger: log.New(os.Stderr, "["+e.Name+"] ", log.LstdFlags)}, nil
-}
-
-type runnable struct {
-	Executable
-	logger *log.Logger
-}
-
-// ID of process. By default Label is used, but if it not set, command name is selected
-func (b *runnable) Label() string {
-	id := b.Name
-	if id == "" {
-		id = b.Command
-	}
-	return id
+func (e *Executable) logger() *log.Logger {
+	e.loggerInit.Do(func() {
+		e.log = log.New(os.Stderr, "["+e.Name+"] ", log.LstdFlags)
+	})
+	return e.log
 }
 
 // try to do graceful process termination by sending SIGKILL. If no response after StopTimeout
 // SIGTERM is used
-func (exe *runnable) stopOrKill(logger *log.Logger, cmd *exec.Cmd, res <-chan error) error {
-	logger.Println("Sending SIGINT")
+func (exe *Executable) stopOrKill(cmd *exec.Cmd, res <-chan error) error {
+	exe.logger().Println("Sending SIGINT")
 	err := cmd.Process.Signal(os.Interrupt)
 	if err != nil {
-		logger.Println("Failed send SIGINT:", err)
+		exe.logger().Println("Failed send SIGINT:", err)
 	}
 
 	select {
 	case err = <-res:
-		logger.Println("Process gracefull stopped")
+		exe.logger().Println("Process gracefull stopped")
 	case <-time.After(exe.StopTimeout):
-		logger.Println("Process gracefull shutdown waiting timeout")
-		err = kill(cmd, logger)
+		exe.logger().Println("Process gracefull shutdown waiting timeout")
+		err = kill(cmd, exe.logger())
 	}
 	return err
 }
 
 // run once executable, wrap output and wait for finish
-func (exe *runnable) Run(ctx context.Context) error {
+func (exe *Executable) run(ctx context.Context) error {
 	cmd := exec.Command(exe.Command, exe.Args...)
 	for _, param := range os.Environ() {
 		cmd.Env = append(cmd.Env, param)
@@ -98,7 +95,7 @@ func (exe *runnable) Run(ctx context.Context) error {
 
 	var outputs []io.Writer
 
-	outputs = append(outputs, NewLoggerStream(exe.logger, "out:"))
+	outputs = append(outputs, NewLoggerStream(exe.logger(), "out:"))
 
 	res := make(chan error, 1)
 
@@ -111,7 +108,7 @@ func (exe *runnable) Run(ctx context.Context) error {
 		}
 		logFile, err := os.OpenFile(exe.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 		if err != nil {
-			exe.logger.Println("Failed open log file:", err)
+			exe.logger().Println("Failed open log file:", err)
 		} else {
 			defer logFile.Close()
 			outputs = append(outputs, logFile)
@@ -125,28 +122,83 @@ func (exe *runnable) Run(ctx context.Context) error {
 
 	err := cmd.Start()
 	if err == nil {
-		exe.logger.Println("Started with PID", cmd.Process.Pid)
+		exe.logger().Println("Started with PID", cmd.Process.Pid)
 	} else {
-		exe.logger.Println("Failed start `", exe.Command, strings.Join(exe.Args, " "), "` :", err)
+		exe.logger().Println("Failed start `", exe.Command, strings.Join(exe.Args, " "), "` :", err)
 	}
 
 	go func() { res <- cmd.Wait() }()
 	select {
 	case <-ctx.Done():
-		err = exe.stopOrKill(exe.logger, cmd, res)
+		err = exe.stopOrKill(cmd, res)
 	case err = <-res:
 	}
 	return err
 }
 
-// line-by-line writer to logger
-func dumpToLogger(reader io.Reader, logger *log.Logger) {
-	scanner := bufio.NewReader(reader)
-	for {
-		line, _, err := scanner.ReadLine()
-		if err != nil {
-			break
-		}
-		logger.Println("out:", string(line))
+type runnable struct {
+	Executable *Executable
+	pool       *Pool
+	closer     func()
+	done       chan struct{}
+}
+
+func (exe *Executable) Start(ctx context.Context, pool *Pool) Instance {
+	chCtx, closer := context.WithCancel(ctx)
+	run := &runnable{
+		Executable: exe,
+		closer:     closer,
+		done:       make(chan struct{}),
+		pool:       pool,
 	}
+	go run.run(chCtx)
+	return run
+}
+
+func (exe *Executable) Config() *Executable { return exe }
+
+func (rn *runnable) run(ctx context.Context) {
+	defer rn.closer()
+	defer close(rn.done)
+	restarts := rn.Executable.Restart
+	rn.pool.OnSpawned(ctx, rn)
+LOOP:
+	for {
+		rn.pool.OnStarted(ctx, rn)
+		err := rn.Executable.run(ctx)
+		if err != nil {
+			rn.Executable.logger().Println("stopped with error:", err)
+		} else {
+			rn.Executable.logger().Println("stopped")
+		}
+		rn.pool.OnStopped(ctx, rn, err)
+		if restarts != -1 {
+			if restarts <= 0 {
+				rn.Executable.logger().Println("max restarts attempts reached")
+				break
+			} else {
+				restarts--
+			}
+		}
+		rn.Executable.logger().Println("waiting", rn.Executable.RestartTimeout)
+		select {
+		case <-time.After(rn.Executable.RestartTimeout):
+		case <-ctx.Done():
+			rn.Executable.logger().Println("instance done:", ctx.Err())
+			break LOOP
+		}
+	}
+	rn.Executable.logger().Println("instance restart loop done")
+	rn.pool.OnFinished(ctx, rn)
+}
+
+func (rn *runnable) Supervisor() Supervisor { return rn.Executable }
+
+func (rn *runnable) Config() *Executable { return rn.Executable }
+
+func (rn *runnable) Pool() *Pool { return rn.pool }
+
+func (rn *runnable) Stop() {
+	rn.closer()
+	<-rn.done
 }

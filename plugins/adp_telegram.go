@@ -1,12 +1,13 @@
 package plugins
 
 import (
-	"github.com/reddec/container"
 	"log"
 	"os"
 	"gopkg.in/telegram-bot-api.v4"
 	"errors"
 	"path/filepath"
+	"github.com/reddec/monexec/pool"
+	"context"
 )
 
 type Telegram struct {
@@ -37,9 +38,11 @@ func (c *Telegram) Prepare() error {
 	return nil
 }
 
-func (c *Telegram) Stopped(runnable container.Runnable, id container.ID, err error) {
-	if c.servicesSet[runnable.Label()] {
-		content, renderErr := c.renderDefault("stopped", string(id), runnable.Label(), err, c.logger)
+func (p *Telegram) OnSpawned(ctx context.Context, sv pool.Instance) {}
+
+func (c *Telegram) OnStarted(ctx context.Context, sv pool.Instance) {
+	if c.servicesSet[sv.Config().Name] {
+		content, renderErr := c.renderDefault("spawned", string(sv.Config().Name), sv.Config().Name, nil, c.logger)
 		if renderErr != nil {
 			c.logger.Println("failed render:", renderErr)
 		} else {
@@ -47,6 +50,19 @@ func (c *Telegram) Stopped(runnable container.Runnable, id container.ID, err err
 		}
 	}
 }
+
+func (c *Telegram) OnStopped(ctx context.Context, sv pool.Instance, err error) {
+	if c.servicesSet[sv.Config().Name] {
+		content, renderErr := c.renderDefault("stopped", string(sv.Config().Name), sv.Config().Name, err, c.logger)
+		if renderErr != nil {
+			c.logger.Println("failed render:", renderErr)
+		} else {
+			c.renderAndSend(content)
+		}
+	}
+}
+
+func (p *Telegram) OnFinished(ctx context.Context, sv pool.Instance) {}
 
 func (c *Telegram) renderAndSend(message string) {
 	msg := tgbotapi.NewMessage(0, message)
@@ -56,17 +72,6 @@ func (c *Telegram) renderAndSend(message string) {
 		_, err := c.bot.Send(msg)
 		if err != nil {
 			c.logger.Println("failed send message to", r, "due to", err)
-		}
-	}
-}
-
-func (c *Telegram) Spawned(runnable container.Runnable, id container.ID) {
-	if c.servicesSet[runnable.Label()] {
-		content, renderErr := c.renderDefault("spawned", string(id), runnable.Label(), nil, c.logger)
-		if renderErr != nil {
-			c.logger.Println("failed render:", renderErr)
-		} else {
-			c.renderAndSend(content)
 		}
 	}
 }
@@ -88,9 +93,9 @@ func (a *Telegram) MergeFrom(other interface{}) (error) {
 	a.Services = append(a.Services, b.Services...)
 	return nil
 }
-
+func (a *Telegram) Close() error { return nil }
 func init() {
-	registerPlugin("telegram", func(file string) PluginConfig {
+	registerPlugin("telegram", func(file string) PluginConfigNG {
 		return &Telegram{workDir: filepath.Dir(file)}
 	})
 }

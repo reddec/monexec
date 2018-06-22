@@ -1,13 +1,14 @@
 package plugins
 
 import (
-	"github.com/reddec/container"
 	"log"
 	"os"
 	"net/smtp"
 	"net"
 	"errors"
 	"path/filepath"
+	"github.com/reddec/monexec/pool"
+	"context"
 )
 
 type Email struct {
@@ -16,7 +17,7 @@ type Email struct {
 	Password string   `yaml:"password"`
 	To       []string `yaml:"to"`
 	Services []string `yaml:"services"`
-	withTemplate       `mapstructure:",squash" yaml:",inline"`
+	withTemplate      `mapstructure:",squash" yaml:",inline"`
 
 	log         *log.Logger
 	hostname    string
@@ -36,9 +37,12 @@ func (c *Email) renderAndSend(message string) {
 	}
 }
 
-func (c *Email) Spawned(runnable container.Runnable, id container.ID) {
-	if c.servicesSet[runnable.Label()] {
-		content, renderErr := c.renderDefault("spawned", string(id), runnable.Label(), nil, c.log)
+func (c *Email) OnSpawned(ctx context.Context, sv pool.Instance) {}
+
+func (c *Email) OnStarted(ctx context.Context, sv pool.Instance) {
+	label := sv.Config().Name
+	if c.servicesSet[label] {
+		content, renderErr := c.renderDefault("spawned", label, label, nil, c.log)
 		if renderErr != nil {
 			c.log.Println("failed render:", renderErr)
 		} else {
@@ -46,23 +50,26 @@ func (c *Email) Spawned(runnable container.Runnable, id container.ID) {
 		}
 	}
 }
+
+func (c *Email) OnStopped(ctx context.Context, sv pool.Instance, err error) {
+	label := sv.Config().Name
+	if c.servicesSet[label] {
+		content, renderErr := c.renderDefault("stopped", label, label, err, c.log)
+		if renderErr != nil {
+			c.log.Println("failed render:", renderErr)
+		} else {
+			c.renderAndSend(content)
+		}
+	}
+}
+
+func (p *Email) OnFinished(ctx context.Context, sv pool.Instance) {}
 
 func (c *Email) Prepare() error {
 	c.servicesSet = makeSet(c.Services)
 	c.log = log.New(os.Stderr, "[email] ", log.LstdFlags)
 	c.hostname, _ = os.Hostname()
 	return nil
-}
-
-func (c *Email) Stopped(runnable container.Runnable, id container.ID, err error) {
-	if c.servicesSet[runnable.Label()] {
-		content, renderErr := c.renderDefault("stopped", string(id), runnable.Label(), err, c.log)
-		if renderErr != nil {
-			c.log.Println("failed render:", renderErr)
-		} else {
-			c.renderAndSend(content)
-		}
-	}
 }
 
 func (a *Email) MergeFrom(other interface{}) (error) {
@@ -103,9 +110,9 @@ func (a *Email) MergeFrom(other interface{}) (error) {
 	a.Services = append(a.Services, b.Services...)
 	return nil
 }
-
+func (a *Email) Close() error { return nil }
 func init() {
-	registerPlugin("email", func(file string) PluginConfig {
+	registerPlugin("email", func(file string) PluginConfigNG {
 		return &Email{workDir: filepath.Dir(file)}
 	})
 }

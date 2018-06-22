@@ -8,75 +8,25 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Pallinder/go-randomdata"
-	"github.com/hashicorp/consul/api"
-	"github.com/reddec/container"
-	"github.com/reddec/container/plugin"
 	"gopkg.in/yaml.v2"
-	"github.com/reddec/monexec/plugins"
+	"github.com/reddec/monexec/pool"
 	"github.com/mitchellh/mapstructure"
 	"errors"
+	"github.com/reddec/monexec/plugins"
+	"reflect"
 )
 
-type ConsulConfig struct {
-	URL                       string        `yaml:"url"`
-	TTL                       time.Duration `yaml:"ttl"`
-	AutoDeregistrationTimeout time.Duration `yaml:"timeout"`
-	Dynamic                   []string      `yaml:"register,omitempty"`
-	Permanent                 []string      `yaml:"permanent,omitempty"`
-}
-
-func DefaultConsulConfig() *ConsulConfig {
-	// Default params for Consul
-	return &ConsulConfig{
-		TTL:                       2 * time.Minute,
-		AutoDeregistrationTimeout: 5 * time.Minute,
-		URL:                       "http://localhost:8500",
-	}
-}
-
 type Config struct {
-	Services      []Executable                    `yaml:"services"`
-	Critical      []string                        `yaml:"critical,omitempty"`
-	Consul        *ConsulConfig                   `yaml:"consul,omitempty"`
-	Plugins       map[string]interface{}          `yaml:",inline"` // all unparsed means plugins
-	loadedPlugins map[string]plugins.PluginConfig `yaml:"-"`
+	Services      []pool.Executable                 `yaml:"services"`
+	Plugins       map[string]interface{}            `yaml:",inline"` // all unparsed means plugins
+	loadedPlugins map[string]plugins.PluginConfigNG `yaml:"-"`
 }
 
 func (c *Config) MergeFrom(other *Config) error {
 	c.Services = append(c.Services, other.Services...)
-	c.Critical = append(c.Critical, other.Critical...)
-
-	def := DefaultConfig()
-	if c.Consul == nil {
-		c.Consul = other.Consul
-	} else if other.Consul != nil {
-		if c.Consul.URL == def.Consul.URL {
-			c.Consul.URL = other.Consul.URL
-		} else if c.Consul.URL != def.Consul.URL && other.Consul.URL != def.Consul.URL && other.Consul.URL != c.Consul.URL {
-			return errors.New("Different CONSUL definition (different URL) - specify same or only once")
-		}
-
-		if c.Consul.TTL == def.Consul.TTL {
-			c.Consul.TTL = other.Consul.TTL
-		} else if c.Consul.TTL != def.Consul.TTL && other.Consul.TTL != def.Consul.TTL && other.Consul.TTL != c.Consul.TTL {
-			return errors.New("Different CONSUL definition (different TTL) - specify same or only once")
-		}
-
-		if c.Consul.AutoDeregistrationTimeout == def.Consul.AutoDeregistrationTimeout {
-			c.Consul.AutoDeregistrationTimeout = other.Consul.AutoDeregistrationTimeout
-		} else if c.Consul.AutoDeregistrationTimeout != def.Consul.AutoDeregistrationTimeout &&
-			other.Consul.AutoDeregistrationTimeout != def.Consul.AutoDeregistrationTimeout &&
-			other.Consul.AutoDeregistrationTimeout != c.Consul.AutoDeregistrationTimeout {
-			return errors.New("Different CONSUL definition (different AutoDeregistrationTimeout) - specify same or only once")
-		}
-
-		c.Consul.Permanent = append(c.Consul.Permanent, other.Consul.Permanent...)
-		c.Consul.Dynamic = append(c.Consul.Dynamic, other.Consul.Dynamic...)
-	}
 	// -- merge plugins
 	for otherPluginName, otherPluginInstance := range other.loadedPlugins {
 		if ownPlugin, needMerge := c.loadedPlugins[otherPluginName]; needMerge {
@@ -91,14 +41,20 @@ func (c *Config) MergeFrom(other *Config) error {
 	return nil
 }
 
+func (c *Config) ClosePlugins() {
+	for _, plugin := range c.loadedPlugins {
+		plugin.Close()
+	}
+}
+
 func DefaultConfig() Config {
 	config := Config{}
 
-	config.loadedPlugins = make(map[string]plugins.PluginConfig)
+	config.loadedPlugins = make(map[string]plugins.PluginConfigNG)
 	return config
 }
 
-func FillDefaultExecutable(exec *Executable) {
+func FillDefaultExecutable(exec *pool.Executable) {
 	if exec.RestartTimeout == 0 {
 		exec.RestartTimeout = 6 * time.Second
 	}
@@ -113,33 +69,8 @@ func FillDefaultExecutable(exec *Executable) {
 	}
 }
 
-func (config *Config) Run(sv container.Supervisor, ctx context.Context) error {
-	critical := plugin.NewCritical(sv, log.New(os.Stderr, "[critical-plugin] ", log.LstdFlags), config.Critical...)
-	sv.Events().AddHandler(critical)
-
+func (config *Config) Run(sv *pool.Pool, ctx context.Context) error {
 	// Initialize plugins
-	// -- consul
-	if config.Consul != nil {
-		consulConfig := api.DefaultConfig()
-		consulConfig.Address = config.Consul.URL
-
-		consul, err := api.NewClient(consulConfig)
-		if err != nil {
-			return err
-		}
-		var consulRegs []plugin.ConsulRegistration
-		for _, label := range config.Consul.Dynamic {
-			consulRegs = append(consulRegs, plugin.ConsulRegistration{Permanent: false, Label: label})
-		}
-		for _, label := range config.Consul.Permanent {
-			consulRegs = append(consulRegs, plugin.ConsulRegistration{Permanent: true, Label: label})
-		}
-		consulLogger := log.New(os.Stderr, "[consul-plugin] ", log.LstdFlags)
-		consulService := plugin.NewConsul(consul, config.Consul.TTL, config.Consul.AutoDeregistrationTimeout, consulLogger, consulRegs)
-		defer consulService.Close()
-		sv.Events().AddHandler(consulService)
-	}
-
 	//-- prepare and add all plugins
 	for pluginName, pluginInstance := range config.loadedPlugins {
 		err := pluginInstance.Prepare()
@@ -147,23 +78,17 @@ func (config *Config) Run(sv container.Supervisor, ctx context.Context) error {
 			log.Println("failed prepare plugin", pluginName, "-", err)
 		} else {
 			log.Println("plugin", pluginName, "ready")
-			sv.Events().AddHandler(pluginInstance)
+			sv.Watch(pluginInstance)
 		}
 	}
 
 	// Run
-	wg := sync.WaitGroup{}
 	for _, exec := range config.Services {
 		FillDefaultExecutable(&exec)
-		wg.Add(1)
-		go func(exec Executable) {
-			defer wg.Done()
-			container.Wait(sv.Watch(ctx, exec.Factory, exec.Restart, exec.RestartTimeout, false))
-		}(exec)
+		sv.Add(&exec)
 	}
 
-	wg.Wait()
-
+	sv.StartAll(ctx)
 	return nil
 }
 
@@ -204,7 +129,27 @@ func LoadConfig(locations ...string) (*Config, error) {
 						log.Println("plugin", pluginName, "not found")
 						continue
 					}
-					err := mapstructure.Decode(description, pluginInstance)
+
+					var wrap = description
+
+					if reflect.ValueOf(wrap).Type().Kind() == reflect.Slice {
+						wrap = map[string]interface{}{
+							"<ITEMS>": description,
+						}
+					}
+
+					config := &mapstructure.DecoderConfig{
+						Metadata:   nil,
+						Result:     pluginInstance,
+						DecodeHook: mapstructure.StringToTimeDurationHookFunc(),
+					}
+
+					decoder, err := mapstructure.NewDecoder(config)
+					if err != nil {
+						panic(err) // failed to initialize decoder - something really wrong
+					}
+
+					err = decoder.Decode(wrap)
 					if err != nil {
 						log.Println("failed load plugin", pluginName, "-", err)
 						continue

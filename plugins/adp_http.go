@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"log"
-	"github.com/reddec/container"
 	"os"
 	"github.com/pkg/errors"
 	"path/filepath"
@@ -13,6 +12,7 @@ import (
 	"io"
 	"time"
 	"context"
+	"github.com/reddec/monexec/pool"
 )
 
 type Http struct {
@@ -60,9 +60,12 @@ func (c *Http) renderAndSend(message string, params map[string]interface{}) {
 	res.Body.Close()
 }
 
-func (c *Http) Spawned(runnable container.Runnable, id container.ID) {
-	if c.servicesSet[runnable.Label()] {
-		content, params, renderErr := c.renderDefaultParams("spawned", string(id), runnable.Label(), nil, c.log)
+func (p *Http) OnSpawned(ctx context.Context, sv pool.Instance) {}
+
+func (c *Http) OnStarted(ctx context.Context, sv pool.Instance) {
+	label := sv.Config().Name
+	if c.servicesSet[label] {
+		content, params, renderErr := c.renderDefaultParams("spawned", label, label, nil, c.log)
 		if renderErr != nil {
 			c.log.Println("failed render:", renderErr)
 		} else {
@@ -71,6 +74,20 @@ func (c *Http) Spawned(runnable container.Runnable, id container.ID) {
 	}
 }
 
+func (c *Http) OnStopped(ctx context.Context, sv pool.Instance, err error) {
+	label := sv.Config().Name
+	if c.servicesSet[label] {
+		content, params, renderErr := c.renderDefaultParams("stopped", label, label, err, c.log)
+		if renderErr != nil {
+			c.log.Println("failed render:", renderErr)
+		} else {
+			c.renderAndSend(content, params)
+		}
+	}
+}
+
+func (p *Http) OnFinished(ctx context.Context, sv pool.Instance) {}
+func (a *Http) Close() error                                     { return nil }
 func (c *Http) Prepare() error {
 	c.servicesSet = makeSet(c.Services)
 	c.log = log.New(os.Stderr, "[http] ", log.LstdFlags)
@@ -81,17 +98,6 @@ func (c *Http) Prepare() error {
 		c.Timeout = 20 * time.Second
 	}
 	return nil
-}
-
-func (c *Http) Stopped(runnable container.Runnable, id container.ID, err error) {
-	if c.servicesSet[runnable.Label()] {
-		content, params, renderErr := c.renderDefaultParams("stopped", string(id), runnable.Label(), err, c.log)
-		if renderErr != nil {
-			c.log.Println("failed render:", renderErr)
-		} else {
-			c.renderAndSend(content, params)
-		}
-	}
 }
 
 func (a *Http) MergeFrom(other interface{}) (error) {
@@ -130,7 +136,7 @@ func (a *Http) MergeFrom(other interface{}) (error) {
 }
 
 func init() {
-	registerPlugin("http", func(file string) PluginConfig {
+	registerPlugin("http", func(file string) PluginConfigNG {
 		return &Http{workDir: filepath.Dir(file)}
 	})
 }

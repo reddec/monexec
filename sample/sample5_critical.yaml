@@ -1,0 +1,11 @@
+services:
+- label: listener2
+  command: /bin/bash
+  args:
+  - -c
+  - nc -l 9001
+  stop_timeout: 5s
+  restart_delay: 1s
+  restart: 1
+critical:
+  - listener2
