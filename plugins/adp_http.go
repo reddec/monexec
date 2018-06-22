@@ -48,6 +48,10 @@ func (c *Http) renderAndSend(message string, params map[string]interface{}) {
 		return
 	}
 
+	for k, v := range c.Headers {
+		req.Header.Set(k,v)
+	}
+
 	ctx, closer := context.WithTimeout(context.Background(), c.Timeout)
 	defer closer()
 
