@@ -65,7 +65,7 @@ func (c *Email) OnStopped(ctx context.Context, sv pool.Instance, err error) {
 
 func (p *Email) OnFinished(ctx context.Context, sv pool.Instance) {}
 
-func (c *Email) Prepare() error {
+func (c *Email) Prepare(ctx context.Context, pl *pool.Pool) error {
 	c.servicesSet = makeSet(c.Services)
 	c.log = log.New(os.Stderr, "[email] ", log.LstdFlags)
 	c.hostname, _ = os.Hostname()

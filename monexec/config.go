@@ -73,7 +73,7 @@ func (config *Config) Run(sv *pool.Pool, ctx context.Context) error {
 	// Initialize plugins
 	//-- prepare and add all plugins
 	for pluginName, pluginInstance := range config.loadedPlugins {
-		err := pluginInstance.Prepare()
+		err := pluginInstance.Prepare(ctx, sv)
 		if err != nil {
 			log.Println("failed prepare plugin", pluginName, "-", err)
 		} else {
@@ -131,8 +131,8 @@ func LoadConfig(locations ...string) (*Config, error) {
 					}
 
 					var wrap = description
-
-					if reflect.ValueOf(wrap).Type().Kind() == reflect.Slice {
+					refVal := reflect.ValueOf(wrap)
+					if wrap != nil && refVal.Type().Kind() == reflect.Slice {
 						wrap = map[string]interface{}{
 							"<ITEMS>": description,
 						}

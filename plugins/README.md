@@ -11,7 +11,7 @@ import (
 
 type MyPlugin struct {}
 
-func (p *MyPlugin) Prepare() error { return nil }
+func (p *MyPlugin) Prepare(ctx context.Context, pl *pool.Pool) error { return nil }
 
 func (p *MyPlugin) OnSpawned(ctx context.Context, sv pool.Instance) {}
 

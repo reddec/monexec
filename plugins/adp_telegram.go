@@ -23,7 +23,7 @@ type Telegram struct {
 	hostname    string
 }
 
-func (c *Telegram) Prepare() error {
+func (c *Telegram) Prepare(ctx context.Context, pl *pool.Pool) error {
 	c.servicesSet = make(map[string]bool)
 	for _, srv := range c.Services {
 		c.servicesSet[srv] = true

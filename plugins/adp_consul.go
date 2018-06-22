@@ -37,7 +37,7 @@ func DefaultConsul() ConsulPlugin {
 	}
 }
 
-func (p *ConsulPlugin) Prepare() error {
+func (p *ConsulPlugin) Prepare(ctx context.Context, pl *pool.Pool) error {
 	consulConfig := api.DefaultConfig()
 	consulConfig.Address = p.URL
 	consul, err := api.NewClient(consulConfig)

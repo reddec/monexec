@@ -34,7 +34,7 @@ func (a *Critical) MergeFrom(other interface{}) (error) {
 	return nil
 }
 
-func (a *Critical) Prepare() error {
+func (a *Critical) Prepare(ctx context.Context, pl *pool.Pool) error {
 	return nil
 }
 func (a *Critical) Close() error { return nil }

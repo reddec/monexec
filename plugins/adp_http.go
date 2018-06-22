@@ -88,7 +88,7 @@ func (c *Http) OnStopped(ctx context.Context, sv pool.Instance, err error) {
 
 func (p *Http) OnFinished(ctx context.Context, sv pool.Instance) {}
 func (a *Http) Close() error                                     { return nil }
-func (c *Http) Prepare() error {
+func (c *Http) Prepare(ctx context.Context, pl *pool.Pool) error {
 	c.servicesSet = makeSet(c.Services)
 	c.log = log.New(os.Stderr, "[http] ", log.LstdFlags)
 	if c.Method == "" {

@@ -137,7 +137,8 @@ func (exe *Executable) run(ctx context.Context) error {
 }
 
 type runnable struct {
-	Executable *Executable
+	Executable *Executable `json:"config"`
+	Running    bool        `json:"running"`
 	pool       *Pool
 	closer     func()
 	done       chan struct{}
@@ -164,6 +165,7 @@ func (rn *runnable) run(ctx context.Context) {
 	rn.pool.OnSpawned(ctx, rn)
 LOOP:
 	for {
+		rn.Running = true
 		rn.pool.OnStarted(ctx, rn)
 		err := rn.Executable.run(ctx)
 		if err != nil {
@@ -171,6 +173,7 @@ LOOP:
 		} else {
 			rn.Executable.logger().Println("stopped")
 		}
+		rn.Running = false
 		rn.pool.OnStopped(ctx, rn, err)
 		if restarts != -1 {
 			if restarts <= 0 {
