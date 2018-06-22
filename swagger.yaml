@@ -1,0 +1,146 @@
+swagger: '2.0'
+info:
+  description: >
+    API description for MonExec - light supervisor
+  version: 0.1.6
+  title: MonExec
+  contact:
+    email: owner@reddec.net
+  license:
+    name: MIT
+host: localhost:9900
+basePath: /
+schemes:
+  - http
+paths:
+  /supervisors:
+    get:
+      summary: Get all names of all loaded executables configuration
+      description: ''
+      operationId: ListSupervisors
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Success
+          schema:
+            type: array
+            items:
+              type: string
+  /supervisors/{name}:
+    get:
+      summary: Get full config of service
+      description: ''
+      operationId: GetSupervisor
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          required: true
+          type: string
+          name: name
+          description: Supervisor label
+      responses:
+        '200':
+          description: Success
+          schema:
+            $ref: '#/definitions/Executable'
+    post:
+      summary: Create instance of supervisor config and run it
+      description: ''
+      operationId: StartInstace
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          required: true
+          type: string
+          name: name
+          description: Supervisor label
+      responses:
+        '200':
+          description: Success
+          schema:
+            $ref: '#/definitions/Instance'
+  /instances:
+    get:
+      summary: Get all names of all spawned services
+      description: ''
+      operationId: ListInstances
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Success
+          schema:
+            type: array
+            items:
+              type: string
+  /instance/{name}:
+    get:
+      summary: Get instance config and status
+      description: ''
+      operationId: GetInstance
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          required: true
+          type: string
+          name: name
+          description: Instance label
+      responses:
+        '200':
+          description: Success
+          schema:
+            $ref: '#/definitions/Executable'
+    post:
+      summary: Stop instance by label
+      description: ''
+      operationId: StopInstace
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          required: true
+          type: string
+          name: name
+          description: Instance label
+      responses:
+        '201':
+          description: Success
+definitions:
+  Executable:
+    type: object
+    properties:
+      Name:
+        type: string
+      Command:
+        type: string
+      Args:
+        type: array
+        items:
+          type: string
+      Environment:
+        type: object
+      WorkDir:
+        type: string
+      StopTimeout:
+        type: string
+      RestartTimeout:
+        type: string
+      Restart:
+        type: integer
+      LogFiles:
+        type: string
+  Instance:
+    type: object
+    properties:
+      running:
+        type: boolean
+      config:
+        $ref: '#/definitions/Executable'
+
+
+externalDocs:
+  url: 'https://github.com/reddec/monexec'

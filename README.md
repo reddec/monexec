@@ -16,6 +16,7 @@ It’s tool for controlling processes like a supervisord but with some important
 * Different strategies for processes
 * Support template-based email notification
 * Support HTTP notification
+* REST API (see swagger.yaml)
 
 ## Installing
 

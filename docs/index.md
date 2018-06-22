@@ -232,6 +232,26 @@ http:
 
 All flags can be set by environment variables with prefix `MONEXEC_`. For example flag `--label sample` can be set as `export MONEXEC_LABEL="sample"`
 
+# How to enable REST API
+
+Since `0.1.6` you can enable simple REST API by adding `rest` plugin.
+
+Full version
+
+```yaml
+rest:
+  listen: "localhost:9900"
+```
+
+
+or minimal (default is `localhost:9900`)
+
+```yaml
+rest:
+```
+
+API documentation see in swagger.yaml file in repository
+
 ## Commands
 
 ### run
