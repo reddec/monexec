@@ -7,10 +7,14 @@ import (
 	"net/http"
 	"time"
 	"github.com/gin-gonic/gin"
+	"os"
+	"io"
+	"github.com/elazarl/go-bindata-assetfs"
 )
 
 const restApiStartupCheck = 1 * time.Second
 
+//go:generate go-bindata -pkg plugins -prefix ../ui/dist/ ../ui/dist/
 type RestPlugin struct {
 	Listen string `yaml:"listen"`
 	server *http.Server
@@ -19,7 +23,7 @@ type RestPlugin struct {
 func (p *RestPlugin) Prepare(ctx context.Context, pl *pool.Pool) error {
 
 	router := gin.Default()
-
+	router.StaticFS("/ui/", &assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: ""})
 	router.GET("/supervisors", func(gctx *gin.Context) {
 		var names = make([]string, 0)
 		for _, sv := range pl.Supervisors() {
@@ -32,6 +36,28 @@ func (p *RestPlugin) Prepare(ctx context.Context, pl *pool.Pool) error {
 		for _, sv := range pl.Supervisors() {
 			if sv.Config().Name == name {
 				gctx.JSON(http.StatusOK, sv.Config())
+				return
+			}
+		}
+		gctx.AbortWithStatus(http.StatusNotFound)
+	})
+	router.GET("/supervisor/:name/log", func(gctx *gin.Context) {
+		name := gctx.Param("name")
+		for _, sv := range pl.Supervisors() {
+			if sv.Config().Name == name {
+				if sv.Config().LogFile == "" {
+					break
+				}
+				f, err := os.Open(sv.Config().LogFile)
+				if err != nil {
+					gctx.AbortWithError(http.StatusBadGateway, err)
+					return
+				}
+				defer f.Close()
+				gctx.Header("Content-Type", "text/plain")
+				gctx.Header("Content-Disposition", "attachment; filename=\""+sv.Config().Name+".log\"")
+				gctx.AbortWithStatus(http.StatusOK)
+				io.Copy(gctx.Writer, f)
 				return
 			}
 		}

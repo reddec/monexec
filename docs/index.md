@@ -252,6 +252,10 @@ rest:
 
 API documentation see in swagger.yaml file in repository
 
+**WEB UI** enable on `/ui` path
+
+![screencapture-127-0-0-1-9000-2018-06-28-20_46_16](https://user-images.githubusercontent.com/6597086/42038135-c961b11a-7b1c-11e8-9437-44de6b36510c.png)
+
 ## Commands
 
 ### run
