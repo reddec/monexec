@@ -7,4 +7,12 @@ services:
   stop_timeout: 5s
   restart_delay: 1s
   restart: 1
+- label: listener3
+  command: /bin/bash
+  logFile: listener3.log
+  args:
+  - -c
+  - nc -l 9002
+  stop_timeout: 5s
+  restart_delay: 1s
 rest:

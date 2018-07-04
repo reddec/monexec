@@ -10,6 +10,7 @@ import (
 	"os"
 	"io"
 	"github.com/elazarl/go-bindata-assetfs"
+	"fmt"
 )
 
 const restApiStartupCheck = 1 * time.Second
@@ -106,7 +107,7 @@ func (p *RestPlugin) Prepare(ctx context.Context, pl *pool.Pool) error {
 	})
 
 	p.server = &http.Server{Addr: p.Listen, Handler: router}
-
+	fmt.Println("rest interface will be available on", p.Listen)
 	start := make(chan error, 1)
 	go func() {
 		start <- p.server.ListenAndServe()

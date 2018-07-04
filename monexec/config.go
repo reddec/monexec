@@ -83,7 +83,8 @@ func (config *Config) Run(sv *pool.Pool, ctx context.Context) error {
 	}
 
 	// Run
-	for _, exec := range config.Services {
+	for i := range config.Services {
+		exec := config.Services[i]
 		FillDefaultExecutable(&exec)
 		sv.Add(&exec)
 	}
