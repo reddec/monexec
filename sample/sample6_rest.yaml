@@ -16,3 +16,4 @@ services:
   stop_timeout: 5s
   restart_delay: 1s
 rest:
+  cors: true

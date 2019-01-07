@@ -2,15 +2,15 @@ package plugins
 
 import (
 	"context"
-	"github.com/reddec/monexec/pool"
-	"github.com/pkg/errors"
-	"net/http"
-	"time"
-	"github.com/gin-gonic/gin"
-	"os"
-	"io"
-	"github.com/elazarl/go-bindata-assetfs"
 	"fmt"
+	"github.com/elazarl/go-bindata-assetfs"
+	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
+	"github.com/reddec/monexec/pool"
+	"io"
+	"net/http"
+	"os"
+	"time"
 )
 
 const restApiStartupCheck = 1 * time.Second
@@ -18,12 +18,16 @@ const restApiStartupCheck = 1 * time.Second
 //go:generate go-bindata -pkg plugins -prefix ../ui/dist/ ../ui/dist/
 type RestPlugin struct {
 	Listen string `yaml:"listen"`
+	CORS   bool   `yaml:"cors"`
 	server *http.Server
 }
 
 func (p *RestPlugin) Prepare(ctx context.Context, pl *pool.Pool) error {
 
 	router := gin.Default()
+	if p.CORS {
+		router.Use(CORSMiddleware())
+	}
 	router.StaticFS("/ui/", &assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: ""})
 	router.GET("/supervisors", func(gctx *gin.Context) {
 		var names = make([]string, 0)
@@ -151,6 +155,21 @@ func defaultRestPlugin() *RestPlugin {
 	}
 }
 
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
+}
 func init() {
 	registerPlugin("rest", func(file string) PluginConfigNG {
 		return defaultRestPlugin()

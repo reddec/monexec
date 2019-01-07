@@ -241,8 +241,10 @@ Full version
 ```yaml
 rest:
   listen: "localhost:9900"
+  cors: false
 ```
 
+_cors option added in `0.1.9`_
 
 or minimal (default is `localhost:9900`)
 
