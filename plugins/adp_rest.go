@@ -29,6 +29,9 @@ func (p *RestPlugin) Prepare(ctx context.Context, pl *pool.Pool) error {
 		router.Use(CORSMiddleware())
 	}
 	router.StaticFS("/ui/", &assetfs.AssetFS{Asset: Asset, AssetDir: AssetDir, AssetInfo: AssetInfo, Prefix: ""})
+	router.GET("/", func(gctx *gin.Context) {
+		gctx.Redirect(http.StatusTemporaryRedirect, "ui")
+	})
 	router.GET("/supervisors", func(gctx *gin.Context) {
 		var names = make([]string, 0)
 		for _, sv := range pl.Supervisors() {
