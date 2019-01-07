@@ -25,42 +25,6 @@
 #   unused-packages = true
 
 
-[[constraint]]
-  name = "github.com/Masterminds/sprig"
-  version = "2.15.0"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/Pallinder/go-randomdata"
-
-[[constraint]]
-  name = "github.com/hashicorp/consul"
-  version = "1.1.0"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/mitchellh/mapstructure"
-
-[[constraint]]
-  name = "github.com/pkg/errors"
-  version = "0.8.0"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/reddec/container"
-
-[[constraint]]
-  name = "gopkg.in/alecthomas/kingpin.v2"
-  version = "2.2.6"
-
-[[constraint]]
-  name = "gopkg.in/telegram-bot-api.v4"
-  version = "4.6.2"
-
-[[constraint]]
-  name = "gopkg.in/yaml.v2"
-  version = "2.2.1"
-
 [prune]
   go-tests = true
   unused-packages = true
