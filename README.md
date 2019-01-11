@@ -39,6 +39,8 @@ It’s tool for controlling processes like a supervisord but with some important
 go get -v -u github.com/reddec/monexec/...
 ```
 
+recommended way is snap
+
 ## Documentation
 
 Usage: [https://reddec.github.io/monexec/](https://reddec.github.io/monexec/)
