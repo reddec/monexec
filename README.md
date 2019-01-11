@@ -1,9 +1,13 @@
 # Monexec
+
+![Mx](docs/logo.svg)
+
 ***MON**itoring **EXE**cutables*
 
 [![GitHub release](https://img.shields.io/github/release/reddec/monexec.svg)](https://github.com/reddec/monexec/releases)
 [![license](https://img.shields.io/github/license/reddec/monexec.svg)](https://github.com/reddec/monexec)
 [![](https://godoc.org/github.com/reddec/monexec/monexec?status.svg)](http://godoc.org/github.com/reddec/monexec/monexec)
+[![Snap Status](https://build.snapcraft.io/badge/reddec/monexec.svg)](https://build.snapcraft.io/user/reddec/monexec)
 
 It’s tool for controlling processes like a supervisord but with some important features:
 
@@ -23,9 +27,13 @@ It’s tool for controlling processes like a supervisord but with some important
 
 ## Installing
 
-Precompilled binaries: [release page](https://github.com/reddec/monexec/releases)
+[![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/monexec)
 
-From source (required Go toolchain):
+* [snapcraft: monexec](https://snapcraft.io/monexec)
+
+* Precompilled binaries: [release page](https://github.com/reddec/monexec/releases)
+
+* From source (required Go toolchain):
 
 ```
 go get -v -u github.com/reddec/monexec/...

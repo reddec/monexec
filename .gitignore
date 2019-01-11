@@ -3,3 +3,8 @@ build
 .goxc.local.json
 vendor/
 dist
+snap
+stage
+prime
+parts
+*.snap

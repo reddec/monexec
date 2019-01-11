@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="113.38477"
+   height="113.38477"
+   viewBox="0 0 29.99972 29.999719"
+   version="1.1"
+   id="svg8"
+   sodipodi:docname="logo.svg"
+   inkscape:version="0.92.3 (5aff6ba, 2018-11-25)">
+  <defs
+     id="defs2">
+    <filter
+       style="color-interpolation-filters:sRGB"
+       inkscape:label="Drop Shadow"
+       id="filter200">
+      <feFlood
+         flood-opacity="0.498039"
+         flood-color="rgb(0,0,0)"
+         result="flood"
+         id="feFlood190" />
+      <feComposite
+         in="flood"
+         in2="SourceGraphic"
+         operator="in"
+         result="composite1"
+         id="feComposite192" />
+      <feGaussianBlur
+         in="composite1"
+         stdDeviation="3"
+         result="blur"
+         id="feGaussianBlur194" />
+      <feOffset
+         dx="2"
+         dy="2"
+         result="offset"
+         id="feOffset196" />
+      <feComposite
+         in="SourceGraphic"
+         in2="offset"
+         operator="over"
+         result="composite2"
+         id="feComposite198" />
+    </filter>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="3.959798"
+     inkscape:cx="-18.318713"
+     inkscape:cy="34.616679"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1853"
+     inkscape:window-height="1025"
+     inkscape:window-x="67"
+     inkscape:window-y="27"
+     inkscape:window-maximized="1"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     units="px" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-89.904333,-131.48955)">
+    <path
+       style="fill:#156d83;stroke-width:0.99999994;fill-opacity:1"
+       d="M 6.3339844 0 C 2.8246764 0 2.3684758e-15 2.8246764 0 6.3339844 L 0 107.05078 C 0 110.56009 2.8246764 113.38477 6.3339844 113.38477 L 107.05078 113.38477 C 110.56009 113.38477 113.38477 110.56009 113.38477 107.05078 L 113.38477 6.3339844 C 113.38477 2.8246764 110.56009 2.3684758e-15 107.05078 0 L 6.3339844 0 z "
+       transform="matrix(0.26458333,0,0,0.26458333,89.904333,131.48955)"
+       id="rect4837" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:3.49655533px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.08741388"
+       x="91.824982"
+       y="156.43073"
+       id="text204"><tspan
+         sodipodi:role="line"
+         x="91.824982"
+         y="156.43073"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.66207361px;font-family:'Ubuntu Mono';-inkscape-font-specification:'Ubuntu Mono';fill:#ffffff;stroke-width:0.08741388"
+         id="tspan206">monexec</tspan></text>
+    <rect
+       style="fill:#15935c;stroke-width:0.09144603;fill-opacity:1"
+       id="rect223"
+       width="6.0352192"
+       height="3.871186"
+       x="111.86433"
+       y="133.9529"
+       rx="0.5537222"
+       ry="0.5537222" />
+    <rect
+       style="fill:#15935c;stroke-width:0.09144603;fill-opacity:1"
+       id="rect223-5"
+       width="6.0352192"
+       height="3.871186"
+       x="111.86433"
+       y="139.35382"
+       rx="0.5537222"
+       ry="0.5537222" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:3.49655533px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.08741388"
+       x="113.18378"
+       y="142.01204"
+       id="text221"><tspan
+         sodipodi:role="line"
+         id="tspan219"
+         x="113.18378"
+         y="142.01204"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.33103681px;font-family:'Ubuntu Mono';-inkscape-font-specification:'Ubuntu Mono';fill:#ffffff;stroke-width:0.08741388">CLI</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:3.49655533px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.08741388"
+       x="113.71643"
+       y="136.62094"
+       id="text221-1"><tspan
+         sodipodi:role="line"
+         id="tspan219-2"
+         x="113.71643"
+         y="136.62094"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.33103681px;font-family:'Ubuntu Mono';-inkscape-font-specification:'Ubuntu Mono';fill:#ffffff;stroke-width:0.08741388">go</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:3.49655533px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.08741388"
+       x="91.862282"
+       y="158.57692"
+       id="text221-0"><tspan
+         sodipodi:role="line"
+         id="tspan219-9"
+         x="91.862282"
+         y="158.57692"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:2.33103681px;font-family:'Ubuntu Mono';-inkscape-font-specification:'Ubuntu Mono';fill:#ffffff;stroke-width:0.08741388">light supervisor</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:500;font-stretch:normal;font-size:10.58333302px;line-height:1.25;font-family:'CMU Serif';-inkscape-font-specification:'CMU Serif, Medium';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="90.706139"
+       y="146.12128"
+       id="text2273"><tspan
+         sodipodi:role="line"
+         id="tspan2271"
+         x="90.706139"
+         y="146.12128"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:19.75555611px;font-family:'Ubuntu Mono';-inkscape-font-specification:'Ubuntu Mono';fill:#ffffff;stroke-width:0.26458332">Mx</tspan></text>
+  </g>
+</svg>
