@@ -1,15 +1,15 @@
 package pool
 
 import (
-	"time"
-	"os/exec"
-	"os"
+	"context"
 	"io"
 	"log"
-	"context"
-	"strings"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
+	"time"
 )
 
 // Executable - basic information about process
@@ -23,6 +23,7 @@ type Executable struct {
 	RestartTimeout time.Duration     `yaml:"restart_delay,omitempty"` // Restart delay
 	Restart        int               `yaml:"restart,omitempty"`       // How much restart allowed. -1 infinite
 	LogFile        string            `yaml:"logFile,omitempty"`       // if empty - only to log. If not absolute - relative to workdir
+	RawOutput      bool              `yaml:"raw,omitempty"`           // print stdout as-is without prefixes
 
 	log        *log.Logger
 	loggerInit sync.Once
@@ -94,8 +95,18 @@ func (exe *Executable) run(ctx context.Context) error {
 	setAttrs(cmd)
 
 	var outputs []io.Writer
+	var stderr []io.Writer
+	var stdout []io.Writer
 
-	outputs = append(outputs, NewLoggerStream(exe.logger(), "out:"))
+	output := NewLoggerStream(exe.logger(), "out:")
+	outputs = append(outputs, output)
+	defer output.Close()
+	stderr = outputs
+	stdout = outputs
+
+	if exe.RawOutput {
+		stdout = append(stdout, os.Stdout)
+	}
 
 	res := make(chan error, 1)
 
@@ -115,10 +126,11 @@ func (exe *Executable) run(ctx context.Context) error {
 		}
 	}
 
-	logStream := io.MultiWriter(outputs...)
+	logStderrStream := io.MultiWriter(stderr...)
+	logStdoutStream := io.MultiWriter(stdout...)
 
-	cmd.Stderr = logStream
-	cmd.Stdout = logStream
+	cmd.Stderr = logStderrStream
+	cmd.Stdout = logStdoutStream
 
 	err := cmd.Start()
 	if err == nil {

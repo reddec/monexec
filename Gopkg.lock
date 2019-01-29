@@ -95,6 +95,30 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:7e5c74b1b7c27e6ba7fb0a4417477f6a95dea7cfd00b186ad5a0453e7bde8c84"
+  name = "github.com/google/pprof"
+  packages = [
+    "driver",
+    "internal/binutils",
+    "internal/driver",
+    "internal/elfexec",
+    "internal/graph",
+    "internal/measurement",
+    "internal/plugin",
+    "internal/report",
+    "internal/symbolizer",
+    "internal/symbolz",
+    "internal/transport",
+    "profile",
+    "third_party/d3",
+    "third_party/d3flamegraph",
+    "third_party/svgpan",
+  ]
+  pruneopts = "UT"
+  revision = "e84dfd68c163c45ea47aa24b3dc7eaa93f6675b1"
+
+[[projects]]
   digest = "1:8f8811f9be822914c3a25c6a071e93beb4c805d7b026cbf298bc577bc1cc945b"
   name = "github.com/google/uuid"
   packages = ["."]
@@ -139,6 +163,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "3959339b333561bf62a38b424fd41517c2c90f40"
+
+[[projects]]
+  branch = "master"
+  digest = "1:3e658fb4b055816998a967aab8abe0966ce1cfcbb42c2f66a22c7c19568aa1d2"
+  name = "github.com/ianlancetaylor/demangle"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "5e5cf60278f657d30daa329dd0e7e893b6b8f027"
 
 [[projects]]
   digest = "1:1069357a2767ba898fd6c715fb15d005403e5becf9b2e747630fbdde2a340302"
@@ -197,11 +229,25 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:2e8f79462685ce92c47687c71fa22bf23e3a530be851af93fa3201d1402ae75d"
+  branch = "master"
+  digest = "1:54818a8d2a7887e4b5d639291822fa7d5fa282e03bd61bb13472530316afd98c"
+  name = "golang.org/x/arch"
+  packages = [
+    "arm/armasm",
+    "arm64/arm64asm",
+    "ppc64/ppc64asm",
+    "x86/x86asm",
+  ]
+  pruneopts = "UT"
+  revision = "5a4828bb704534b8a2fa09c791c67d0fb372f472"
+
+[[projects]]
+  digest = "1:e7f3d912bf067f2ee228dbb95853e6e0917d452239663372eb3bf03068ddb37c"
   name = "golang.org/x/crypto"
   packages = [
     "pbkdf2",
     "scrypt",
+    "ssh/terminal",
   ]
   pruneopts = "UT"
   revision = "d172538b2cfce0c13cee31e647d0367aa8cd2486"
@@ -213,6 +259,26 @@
   packages = ["unix"]
   pruneopts = "UT"
   revision = "63fc586f45fe72d95d5240a5d5eb95e6503907d3"
+
+[[projects]]
+  digest = "1:5e46904bb22d49234fd73a5bcb7cc95f489a5abf5c8eae71ef3e66b3ef47b67b"
+  name = "golang.org/x/text"
+  packages = [
+    "collate",
+    "collate/build",
+    "internal/colltab",
+    "internal/gen",
+    "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
+    "language",
+    "transform",
+    "unicode/cldr",
+    "unicode/norm",
+  ]
+  pruneopts = "UT"
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
 
 [[projects]]
   digest = "1:c06d9e11d955af78ac3bbb26bd02e01d2f61f689e1a3bce2ef6fb683ef8a7f2d"
@@ -254,9 +320,18 @@
     "github.com/Pallinder/go-randomdata",
     "github.com/elazarl/go-bindata-assetfs",
     "github.com/gin-gonic/gin",
+    "github.com/google/pprof/driver",
+    "github.com/google/pprof/profile",
     "github.com/hashicorp/consul/api",
     "github.com/mitchellh/mapstructure",
     "github.com/pkg/errors",
+    "golang.org/x/arch/arm/armasm",
+    "golang.org/x/arch/arm64/arm64asm",
+    "golang.org/x/arch/ppc64/ppc64asm",
+    "golang.org/x/arch/x86/x86asm",
+    "golang.org/x/crypto/ssh/terminal",
+    "golang.org/x/text/collate",
+    "golang.org/x/text/language",
     "gopkg.in/alecthomas/kingpin.v2",
     "gopkg.in/telegram-bot-api.v4",
     "gopkg.in/yaml.v2",

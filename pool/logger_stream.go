@@ -9,7 +9,7 @@ type LogInterface interface {
 	Println(v ...interface{})
 }
 
-func NewLoggerStream(logger LogInterface, prefix string) (io.WriteCloser) {
+func NewLoggerStream(logger LogInterface, prefix string) io.WriteCloser {
 	reader, writer := io.Pipe()
 	go func() {
 		scanner := bufio.NewReader(reader)

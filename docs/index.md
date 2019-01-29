@@ -420,3 +420,16 @@ critical:
 
 ```
 
+# Raw stdout
+
+For several reasons (i.e. use in a bash tools) raw stdout is required from application.
+
+Since `0.1.12` to disable all prefixes in STDOUT (in STDERR they will still persists) use flag `--raw, -R`.
+
+**Example:**
+
+```bash
+monexec -R echo 123 > sample.txt # run echo command. Use CTRL+C to interrupt when needed
+```
+
+The file `sample.txt` will now contains ONLY result of echo command (i.e. `123`)
