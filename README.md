@@ -23,8 +23,8 @@ It’s tool for controlling processes like a supervisord but with some important
 * REST API (see swagger.yaml)
 * Web UI (if REST API enabled)
 
-![screencapture-127-0-0-1-9000-2018-06-28-20_46_16](https://user-images.githubusercontent.com/6597086/42038135-c961b11a-7b1c-11e8-9437-44de6b36510c.png)
-
+![screen1](https://reddec.net/images/project/monexec/screen1.png)
+![screen2](https://reddec.net/images/project/monexec/screen2.gif)
 ## Installing
 
 [![Get it from the Snap Store](https://snapcraft.io/static/images/badges/en/snap-store-black.svg)](https://snapcraft.io/monexec)
