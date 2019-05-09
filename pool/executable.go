@@ -12,12 +12,13 @@ import (
 	"time"
 )
 
-// Executable - basic information about process
+// Executable - basic information about process.
 type Executable struct {
 	Name           string            `yaml:"label,omitempty"`         // Human-readable label for process. If not set - command used
 	Command        string            `yaml:"command"`                 // Executable
 	Args           []string          `yaml:"args,omitempty"`          // Arguments to command
 	Environment    map[string]string `yaml:"environment,omitempty"`   // Additional environment variables
+	EnvFiles       []string          `yaml:"envFiles"`                // Additional environment variables from files (not found files ignored). Format key=value
 	WorkDir        string            `yaml:"workdir,omitempty"`       // Working directory. If not set - current dir used
 	StopTimeout    time.Duration     `yaml:"stop_timeout,omitempty"`  // Timeout before terminate process
 	RestartTimeout time.Duration     `yaml:"restart_delay,omitempty"` // Restart delay
@@ -85,6 +86,16 @@ func (exe *Executable) run(ctx context.Context) error {
 	}
 	if exe.Environment != nil {
 		for k, v := range exe.Environment {
+			cmd.Env = append(cmd.Env, k+"="+v)
+		}
+	}
+	for _, fileName := range exe.EnvFiles {
+		params, err := ParseEnvironmentFile(fileName)
+		if err != nil {
+			exe.logger().Println("failed parse environment file", fileName, ":", err)
+			continue
+		}
+		for k, v := range params {
 			cmd.Env = append(cmd.Env, k+"="+v)
 		}
 	}

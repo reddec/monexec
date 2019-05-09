@@ -18,6 +18,7 @@ It’s tool for controlling processes like a supervisord but with some important
 * Supports gracefull and fast shutdown by signals
 * Developed for used inside Docker containers
 * Different strategies for processes
+* Support additional environment files
 * Support template-based email notification
 * Support HTTP notification
 * REST API (see swagger.yaml)
