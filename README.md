@@ -24,6 +24,8 @@ It’s tool for controlling processes like a supervisord but with some important
 * REST API (see swagger.yaml)
 * Web UI (if REST API enabled)
 
+[Buy me a coffe on Patreon](https://www.patreon.com/bePatron?u=15369842)
+
 ![screen1](https://reddec.net/images/project/monexec/screen1.png)
 ![screen2](https://reddec.net/images/project/monexec/screen2.gif)
 ## Installing
