@@ -8,6 +8,7 @@
 [![license](https://img.shields.io/github/license/reddec/monexec.svg)](https://github.com/reddec/monexec)
 [![](https://godoc.org/github.com/reddec/monexec/monexec?status.svg)](http://godoc.org/github.com/reddec/monexec/monexec)
 [![Snap Status](https://build.snapcraft.io/badge/reddec/monexec.svg)](https://build.snapcraft.io/user/reddec/monexec)
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=4UKBSN5HVB3Y8&source=url)
 
 It’s tool for controlling processes like a supervisord but with some important features:
 
