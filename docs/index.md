@@ -52,6 +52,7 @@ Temporary (will auto de-registrate service in a critical state or after graceful
 ```bash  
 monexec run -l srv1 --consul -- nc -l 9000  
 ```  
+
 Permanent  
   
 ```bash  
@@ -63,7 +64,8 @@ monexec run -l srv1 --consul --consul-permanent -- nc -l 9000
 Suppose Consul agent is running in host `registry`  
   
 ```bash  
-monexec run --consul --consul-address "http://registry:8500" -l srv1 -- nc -l 9000```  
+monexec run --consul --consul-address "http://registry:8500" -l srv1 -- nc -l 9000
+```  
   
 # How to integrate with Telegram  
   
@@ -95,7 +97,8 @@ Configuration avaiable only from .yaml files:
   
 ```yaml  
 telegram:  
- # BOT token token: "123456789:AAAAAAAAAAAAAAAAAAAAAA_BBBBBBBBBBBB" services: # services that will be monitored - "listener2" recipients: # List of telegrams chat id - 123456789 template: | *{{.label}}* Service {{.label}} {{.action}} {{if .error}}⚠️ *Error:*  {{.error}}{{end}} _time: {{.time}}_ _host: {{.hostname}}_```  
+ # BOT token token: "123456789:AAAAAAAAAAAAAAAAAAAAAA_BBBBBBBBBBBB" services: # services that will be monitored - "listener2" recipients: # List of telegrams chat id - 123456789 template: | *{{.label}}* Service {{.label}} {{.action}} {{if .error}}⚠️ *Error:*  {{.error}}{{end}} _time: {{.time}}_ _host: {{.hostname}}_
+ ```  
   
 Since `0.1.4` you also can specify `templateFile` instead of `template`  
   
@@ -137,7 +140,8 @@ Configuration avaiable only from .yaml files:
   
 email:  
  services: - myservice smtp: "smtp.gmail.com:587" from: "example-monitor@gmail.com" password: "xyzzzyyyzyyzyz" to: - "admin1@example.com" - "admin2@example.com" template: | Subject: {{.label}}  
- Service {{.label}} {{.action}} templateFile: "./email.html"```  
+ Service {{.label}} {{.action}} templateFile: "./email.html"
+ ```  
   
 `template` will be used as fallback for `templateFile`. If template file location is not absolute, it will be calculated  
 from configuration directory.  
@@ -156,7 +160,8 @@ Configuration avaiable only from .yaml files:
   
 ```yaml  
 http:  
- services: - myservice url: "http://example.com/{{.label}}/{{.action}}" templateFile: "./body.txt"```  
+ services: - myservice url: "http://example.com/{{.label}}/{{.action}}" templateFile: "./body.txt"
+ ```  
   
 `template` will be used as fallback for `templateFile`. If template file location is not absolute, it will be calculated from configuration directory.  
   
@@ -185,7 +190,8 @@ Full version
   
 ```yaml  
 rest:  
- listen: "localhost:9900" cors: false```  
+ listen: "localhost:9900" cors: false
+ ```  
   
 _cors option added in `0.1.9`_  
   
@@ -251,8 +257,8 @@ Full sample of configuration file:
 services:  
 - label: Netcat Sample Service  
  command: nc args: - -l - "9000" stop_timeout: 5s restart_delay: 5s restart: -1consul:  
- url: http://localhost:8500 ttl: 3s timeout: 1m0s```  
-  
+ url: http://localhost:8500 ttl: 3s timeout: 1m0s
+ ```
   
 # How to generate sample config  
   
@@ -280,7 +286,9 @@ and get
 services:  
 - label: srvExt1  
  command: restart args: - java - -jar - srvExt1.jar stop_timeout: 5s restart_delay: 5s restart: 10consul:  
- url: http://localhost:8500 ttl: 3s timeout: 1m0s register: - srvExt1```  
+ url: http://localhost:8500 ttl: 3s timeout: 1m0s register: - srvExt1
+ ```  
+
 # How to log to file a service  
   
 Since `0.1.5` you can copy content of STDERR/STDOUT  service output to specific file: option `logFile` in service section. If file path not absolute log file is putted relative to working directory.  
