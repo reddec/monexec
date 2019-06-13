@@ -6,6 +6,7 @@
 [![GitHub release](https://img.shields.io/github/release/reddec/monexec.svg)](https://github.com/reddec/monexec/releases)  
 [![license](https://img.shields.io/github/license/reddec/monexec.svg)](https://github.com/reddec/monexec)  
 [![](https://godoc.org/github.com/reddec/monexec/monexec?status.svg)](http://godoc.org/github.com/reddec/monexec/monexec)  
+[![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=4UKBSN5HVB3Y8&source=url)
   
 It's tool for controlling processes like a **supervisord** but with some important features:  
 * Easy to use - no dependencies. Just a single binary file pre-compilled for most major platforms  
@@ -66,6 +67,16 @@ Suppose Consul agent is running in host `registry`
 ```bash  
 monexec run --consul --consul-address "http://registry:8500" -l srv1 -- nc -l 9000
 ```  
+  
+# Documentation
+
+Still under the construction. PR very welcome!
+
+Look at cookbook also
+
+1. [Services and service configuration](/service)
+
+# Cookbook
   
 # How to integrate with Telegram  
   
