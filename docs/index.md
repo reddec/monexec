@@ -108,7 +108,12 @@ Configuration avaiable only from .yaml files:
   
 ```yaml  
 telegram:  
- # BOT token token: "123456789:AAAAAAAAAAAAAAAAAAAAAA_BBBBBBBBBBBB" services: # services that will be monitored - "listener2" recipients: # List of telegrams chat id - 123456789 template: | *{{.label}}* Service {{.label}} {{.action}} {{if .error}}⚠️ *Error:*  {{.error}}{{end}} _time: {{.time}}_ _host: {{.hostname}}_
+ # BOT token token: "123456789:AAAAAAAAAAAAAAAAAAAAAA_BBBBBBBBBBBB" 
+ services: # services that will be monitored 
+ - "listener2" 
+ recipients: # List of telegrams chat id 
+ - 123456789 
+ template: | *{{.label}}* Service {{.label}} {{.action}} {{if .error}}⚠️ *Error:*  {{.error}}{{end}} _time: {{.time}}_ _host: {{.hostname}}_
  ```  
   
 Since `0.1.4` you also can specify `templateFile` instead of `template`  
@@ -150,7 +155,15 @@ Configuration avaiable only from .yaml files:
 ```yaml  
   
 email:  
- services: - myservice smtp: "smtp.gmail.com:587" from: "example-monitor@gmail.com" password: "xyzzzyyyzyyzyz" to: - "admin1@example.com" - "admin2@example.com" template: | Subject: {{.label}}  
+ services: 
+ - myservice 
+  smtp: "smtp.gmail.com:587" 
+  from: "example-monitor@gmail.com" 
+  password: "xyzzzyyyzyyzyz" 
+  to: 
+  - "admin1@example.com" 
+  - "admin2@example.com" 
+  template: | Subject: {{.label}}  
  Service {{.label}} {{.action}} templateFile: "./email.html"
  ```  
   
@@ -171,7 +184,10 @@ Configuration avaiable only from .yaml files:
   
 ```yaml  
 http:  
- services: - myservice url: "http://example.com/{{.label}}/{{.action}}" templateFile: "./body.txt"
+ services: 
+ - myservice 
+ url: "http://example.com/{{.label}}/{{.action}}" 
+ templateFile: "./body.txt"
  ```  
   
 `template` will be used as fallback for `templateFile`. If template file location is not absolute, it will be calculated from configuration directory.  
@@ -201,7 +217,8 @@ Full version
   
 ```yaml  
 rest:  
- listen: "localhost:9900" cors: false
+ listen: "localhost:9900" 
+ cors: false
  ```  
   
 _cors option added in `0.1.9`_  
@@ -267,8 +284,17 @@ Full sample of configuration file:
 ```yaml  
 services:  
 - label: Netcat Sample Service  
- command: nc args: - -l - "9000" stop_timeout: 5s restart_delay: 5s restart: -1consul:  
- url: http://localhost:8500 ttl: 3s timeout: 1m0s
+ command: nc 
+ args: 
+  - -l 
+  - "9000" 
+ stop_timeout: 5s 
+ restart_delay: 5s 
+ restart: -1
+ consul:  
+  url: http://localhost:8500 
+  ttl: 3s 
+  timeout: 1m0s
  ```
   
 # How to generate sample config  
@@ -296,8 +322,20 @@ and get
 ```yaml  
 services:  
 - label: srvExt1  
- command: restart args: - java - -jar - srvExt1.jar stop_timeout: 5s restart_delay: 5s restart: 10consul:  
- url: http://localhost:8500 ttl: 3s timeout: 1m0s register: - srvExt1
+ command: restart 
+ args: 
+ - java 
+ - -jar -
+  srvExt1.jar 
+  stop_timeout: 5s 
+  restart_delay: 5s 
+  restart: 10
+  consul:  
+    url: http://localhost:8500 
+    ttl: 3s 
+    timeout: 1m0s 
+    register: 
+      - srvExt1
  ```  
 
 # How to log to file a service  
@@ -307,7 +345,15 @@ Since `0.1.5` you can copy content of STDERR/STDOUT  service output to specific 
 ```yaml  
 services:  
 - label: listener4  
- command: nc logFile: /var/log/listener4.log args: - -v - -l - 9001 stop_timeout: 5s restart_delay: 5s restart: -1  
+ command: nc 
+ logFile: /var/log/listener4.log 
+ args: 
+ - -v 
+ - -l 
+ - 9001 
+ stop_timeout: 5s 
+ restart_delay: 5s 
+ restart: -1  
 ```  
   
 # Critical services  
@@ -322,11 +368,28 @@ Add section `critical` to configuration:
 ```yaml  
 services:  
 - label: srvExt1  
- command: restart args: - java - -jar - srvExt1.jar stop_timeout: 5s restart_delay: 5s restart: 10  
+ command: restart 
+ args: 
+ - java 
+ - -jar 
+ - srvExt1.jar 
+ stop_timeout: 5s 
+ restart_delay: 5s 
+ restart: 10  
 - label: consul  
- command: restart args: - consul - agen - -dev - -bootstrap - -uiconsul:  
- url: http://localhost:8500 ttl: 3s timeout: 1m0s register: - srvExt1critical:  
- - consul  
+ command: restart 
+ args: 
+ - consul 
+ - agen 
+ - -dev 
+ - -bootstrap 
+ - -uiconsul:  
+ url: http://localhost:8500 
+ ttl: 3s 
+ timeout: 1m0s
+  register: 
+  - srvExt1critical:  
+  - consul  
 ```  
   
 # Raw stdout  
