@@ -74,7 +74,7 @@ Still under the construction. PR very welcome!
 
 Look at cookbook also
 
-1. [Services and service configuration](/service)
+1. [Services and service configuration](service)
 
 # Cookbook
   
