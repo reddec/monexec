@@ -1,8 +1,8 @@
 package pool
 
 import (
-	"io"
 	"bufio"
+	"io"
 )
 
 type LogInterface interface {

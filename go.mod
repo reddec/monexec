@@ -36,3 +36,5 @@ require (
 	gopkg.in/telegram-bot-api.v4 v4.6.2
 	gopkg.in/yaml.v2 v2.2.1
 )
+
+go 1.13

@@ -13,7 +13,7 @@ func setAttrs(cmd *exec.Cmd) {
 	}
 }
 
-func kill(cmd *exec.Cmd, logger *log.Logger) error {
+func kill(cmd *exec.Cmd, logger *log.Logger) {
 	pgid, err := syscall.Getpgid(cmd.Process.Pid)
 	if err == nil {
 		if err := syscall.Kill(-pgid, syscall.SIGKILL); err != nil {
@@ -27,5 +27,4 @@ func kill(cmd *exec.Cmd, logger *log.Logger) error {
 	if err != nil {
 		logger.Println("Failed kill:", err)
 	}
-	return err
 }
